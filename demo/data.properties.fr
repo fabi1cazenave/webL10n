@@ -1,0 +1,19 @@
+# French translation
+# vim: ft=jproperties
+
+Phone=Téléphone
+Phone.title=Ceci est un téléphone
+Messages=SMS/MMS
+Calendar=Calendrier
+  
+Gallery=Galerie
+Camera=Appareil Photo
+Books=Livres
+
+Browser=Navigateur
+Calculator=Calculatrice
+Music=Musique
+
+phone=Appels:
+sms=SMS:
+email=Mails:
