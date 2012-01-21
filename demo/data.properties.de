@@ -1,0 +1,13 @@
+# French translation
+# vim: ft=jproperties
+
+Phone=Telefon
+Phone.title=Das ist ein Telefon
+Calendar=Kalender
+Camera=Fotoapparat
+Books=Bücher
+Browser=Browser
+Calculator=Rechner
+Music=Musik
+
+langSelection=Sprachwahl

@@ -1,0 +1,7 @@
+# Default translation
+# vim: ft=jproperties
+
+hello=Hallo!
+hello.accesskey=h
+hello.title=hier clicken
+sayHello=Hallo Mozilla!\nHallo, Welt!

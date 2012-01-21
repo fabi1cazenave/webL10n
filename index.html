@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>l10n test page</title>
+  <meta charset="utf-8" />
+  <link rel="resource" type="text/l10n" href="demo/data.properties" />
+  <link rel="resource" type="text/l10n" href="demo/hello.properties" />
+  <script type="text/javascript" src="l10n.js"></script>
+</head>
+<body>
+  <p> The words below and the dialog box content are translated dynamically —
+  check the source. </p>
+  <p style="text-align: center;">
+    <span data-l10n-id="Phone" title="phone">Phone</span>
+    <span data-l10n-id="Calculator">Calculator</span>
+    <span data-l10n-id="Music">Music</span>
+    <span data-l10n-id="Calendar">Calendar</span>
+    <button data-l10n-id="hello" accesskey="h"
+        onclick="alert(_('sayHello'));">Hello!</button>
+  </p>
+  <p style="text-align: right;">
+    <span data-l10n-id="langSelection">language selection</span>:
+    <select onchange="l10n.language = this.value;">
+      <option disabled selected> </option>
+      <option>en</option>
+      <option>fr</option>
+      <option>de</option>
+    </select>
+  </p>
+</body>
+</html>
