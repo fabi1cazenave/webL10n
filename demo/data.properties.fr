@@ -4,10 +4,10 @@
 Phone=Téléphone
 Phone.title=Ceci est un téléphone
 Calendar=Calendrier
-Camera=Appareil Photo
+Calendar.title=Ceci est un calendrier
 Books=Livres
-Browser=Navigateur
 Calculator=Calculatrice
 Music=Musique
 
 langSelection=Sélection de langue
+about=Cette page est traduite dynamiquement.

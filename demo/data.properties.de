@@ -4,10 +4,10 @@
 Phone=Telefon
 Phone.title=Das ist ein Telefon
 Calendar=Kalender
-Camera=Fotoapparat
+Calendar.title=Das ist ein Kelender
 Books=Bücher
-Browser=Browser
 Calculator=Rechner
 Music=Musik
 
 langSelection=Sprachwahl
+about=Diese Seite wird dynamisch übersetzt.
