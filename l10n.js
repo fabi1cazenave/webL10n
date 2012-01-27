@@ -19,10 +19,10 @@
  * THE SOFTWARE.
  */
 
+'use strict';
 var l10n = (function(window, document, undefined) {
-  'use strict';
-
-  var gStrings = [];
+  var gL10nData = {};
+  var gTextData = '';
   var gLanguage = '';
 
   function translate(fragment) {
@@ -38,29 +38,164 @@ var l10n = (function(window, document, undefined) {
     for (var i = 0; i < elementCount; i++) {
       var element = elements[i];
 
-      // translate the element content
+      // translate the element
       var key = element.dataset.l10nId;
-      var value = gStrings[key];
-      if (value)
-        element.innerHTML = value;
+      var data = gL10nData[key];
+      if (!data)
+        continue;
 
-      // translate the element attributes
-      for (var j = 0; j < attrCount; j++) {
-        var attrName = attrList[j];
-        var attrValue = gStrings[key + '.' + attrName];
-        if (attrValue && element.hasAttribute(attrName))
-          element.setAttribute(attrName, attrValue);
+      // element content
+      element.innerHTML = data.value || data;
+
+      // element attributes
+      if (data.attributes) {
+        for (var j = 0; j < attrCount; j++) {
+          var attrName = attrList[j];
+          var attrValue = data.attributes[attrName];
+          if (attrValue && element.hasAttribute(attrName))
+            element.setAttribute(attrName, attrValue);
+        }
       }
     }
   }
 
+  function evalString(text) {
+    return text.replace(/\\\\/g, '\\')
+               .replace(/\\n/g, '\n')
+               .replace(/\\r/g, '\r')
+               .replace(/\\t/g, '\t')
+               .replace(/\\b/g, '\b')
+               .replace(/\\f/g, '\f')
+               .replace(/\\"/g, '"')
+               .replace(/\\'/g, "'");
+  }
+
   function parseProperties(text) {
-    var lines = text.replace(/^\s*|\s*$/, '').split(/[\r\n]+/);
-    for (var i = 0; i < lines.length; i++) {
-      if ((/^\s*#|^\s*$/).test(lines[i])) // comment or blank line
+    gTextData += text;
+
+    // parse the *.properties file into an associative array
+    var data = [];
+    var entries = text.replace(/^\s*|\s*$/, '').split(/[\r\n]+/);
+    for (var i = 0; i < entries.length; i++) {
+      if ((/^\s*#|^\s*$/).test(entries[i])) // comment or blank line
         continue;
-      var tmp = lines[i].split('=');
-      gStrings[tmp[0]] = tmp[1].replace(/\\n/g, '\n');
+      var tmp = entries[i].split('=');
+      data[tmp[0]] = evalString(tmp[1]);
+    }
+
+    // find the attribute descriptions, if any
+    for (var key in data) {
+      var hasAttribute = false;
+      var index = key.lastIndexOf('.');
+      if (index > 0) {
+        var attr = key.substr(index + 1);
+        var elt = key.substring(0, index);
+        hasAttribute = (elt in data);
+      }
+      if (hasAttribute) {
+        if (typeof gL10nData[elt] == 'string') {
+          gL10nData[elt] = {};
+          gL10nData[elt].value = data[elt];
+          gL10nData[elt].attributes = {};
+        }
+        gL10nData[elt].attributes[attr] = data[key];
+      } else
+        gL10nData[key] = data[key];
+    }
+  }
+
+  function parseL20n(text) {
+    gTextData += text;
+
+    function nextEntity() {
+      while (true) {
+        var match = /\/\*|</.exec(text);
+        if (!match || !match.length)
+          return false;
+        switch (match[0]) {
+          case '/*': // comment
+            var end = text.indexOf('*/', match.index);
+            if (end < 0)
+              return false;
+            text = text.substr(end + 2);
+            break;
+          case '<': // entity or macro
+            text = text.substr(match.index);
+            return true;
+            break;
+        }
+      }
+      return true;
+    }
+    function nextMatch(re) {
+      var match = re.exec(text);
+      if (!match || !match.length)
+        return null;
+      var rv = {
+        value: text.substring(0, match.index),
+        token: match[0],
+        index: match.index
+      };
+      text = text.substr(match.index + match[0].length);
+      return rv;
+    }
+    function readString() {
+      //var value = nextMatch(/"/).value;
+      // XXX we need a way to ignore \" sequences more properly
+      var rv = nextMatch(/[^\\]"/);
+      return evalString(rv.value + rv.token[0]);
+    }
+    function readValue() {
+      //var token = nextMatch(/"/).token;
+      //var token = nextMatch(/["\[\{]/).token;
+      switch (nextMatch(/["\[\{]/).token) {
+        case '"':
+          return readString();
+          break;
+        case '[':
+          return []; // TODO: readArray();
+          break;
+        case '{':
+          return {}; // TODO: readHash();
+          break;
+      }
+      return null;
+    }
+    while (nextEntity()) {
+      // now expecting an identifier
+      var id = nextMatch(/[a-zA-Z]\w*/).token;
+
+      // XXX ignoring macros and indexes atm
+      switch (text[0]) {
+        case '[': // index
+          break;
+        case '(': // macro
+          break;
+      }
+
+      // now expecting a value: string|array|hash
+      var value = readValue();
+
+      // now expecting either key-value pairs or the end of the entity
+      var attributes = {};
+      var hasAttrs = false;
+      var endOfEntity = false;
+      while (!endOfEntity) {
+        var match = nextMatch(/[a-zA-Z]\w*|>/);
+        if (match && (match.token != '>')) {
+          nextMatch(/\s*:\s*/);
+          attributes[match.token] = readValue();
+          hasAttrs = true;
+        } else
+          endOfEntity = true;
+      }
+      if (hasAttrs) {
+        //gL10nData[id] = new String(value);
+        gL10nData[id] = {};
+        gL10nData[id].value = value;
+        gL10nData[id].attributes = attributes;
+      } else
+        gL10nData[id] = value;
     }
   }
 
@@ -102,13 +237,15 @@ var l10n = (function(window, document, undefined) {
     };
   }
 
-  function loadResources(lang, callback) {
-    gStrings = [];
+  function loadLocale(lang, callback) {
+    gL10nData = {};
+    gTextData = '';
     gLanguage = lang;
 
     // check all <link type="text/l10n" src="..." /> nodes
     // and load the resource files
-    var langLink = document.querySelectorAll('link[type="text/l10n"]');
+    var langLink = document.querySelectorAll(
+        'link[type="text/l10n"], link[type="text/properties"]');
     var langCount = langLink.length;
 
     // start the callback when all resources are loaded
@@ -117,14 +254,21 @@ var l10n = (function(window, document, undefined) {
       var gCount = 0;
       onResourceLoaded = function() {
         gCount++;
-        if (gCount >= langCount)
+        if (gCount >= langCount) {
           callback();
+          // fire an 'l10nLocaleLoaded' DOM event
+          var evtObject = document.createEvent('Event');
+          evtObject.initEvent('l10nLocaleLoaded', false, false);
+          window.dispatchEvent(evtObject);
+        }
       }
     }
 
     // load all resource files
     for (var i = 0; i < langCount; i++) {
-      var resource = new l10nResource(langLink[i].href, parseProperties);
+      var parser = (langLink[i].type == 'text/l10n') ?
+        parseL20n : parseProperties;
+      var resource = new l10nResource(langLink[i].href, parser);
       var rv = resource.load(lang, onResourceLoaded);
       if (rv != lang) // lang not found, used default resource instead
         gLanguage = '';
@@ -135,22 +279,25 @@ var l10n = (function(window, document, undefined) {
     var async = true;
     if (async) {
       // asynchronous (recommended on non-local files)
-      loadResources(navigator.language, translate);
+      loadLocale(navigator.language, translate);
     } else {
-      // synchronous (much faster)
-      loadResources(navigator.language);
+      // synchronous (much faster but risky)
+      loadLocale(navigator.language);
       translate();
     }
-
   }, false);
 
   return {
-    get: function(key) { return gStrings[key] ? gStrings[key] : key; },
-    set: function(key, val) { gStrings[key] = val; },
+    get: function(key) {
+      return gL10nData[key] ? (gL10nData[key].value || gL10nData[key]) : key;
+    },
+    set: function(key, val) { gL10nData[key] = val; },
     get language() { return gLanguage; },
-    set language(lang) { loadResources(lang, translate); },
+    set language(lang) { loadLocale(lang, translate); },
+    get text() { return gTextData; },
+    get data() { return gL10nData; },
     translate: translate,
-    load: loadResources
+    load: loadLocale
   };
 })(window, document);
 

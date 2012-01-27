@@ -3,9 +3,10 @@
 <head>
   <title> l20n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="text/l10n" href="locales/data.intl" />
-  <link rel="resource" type="text/l10n" href="locales/hello.intl" />
+  <link rel="resource" type="text/properties" href="locales/data.properties" />
+  <link rel="resource" type="text/properties" href="locales/hello.properties" />
   <script type="text/javascript" src="l10n.js"></script>
+  <link rel="stylesheet" type="text/css" href="style.css" />
   <script type="text/javascript">
     window.addEventListener('l10nLocaleLoaded', function() {
       document.querySelector('select').value = l10n.language;
@@ -14,7 +15,6 @@
           JSON.stringify(l10n.data, undefined, 2);
     }, false);
   </script>
-  <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 <body>
   <div id="demo">

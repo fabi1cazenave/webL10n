@@ -1,13 +1,14 @@
-# French translation
+# German translation
 # vim: ft=jproperties
 
 Phone=Telefon
 Phone.title=Das ist ein Telefon
 Calendar=Kalender
-Calendar.title=Das ist ein Kelender
+Calendar.title=Das ist ein Kalender
 Books=Bücher
 Calculator=Rechner
 Music=Musik
 
-langSelection=Sprachwahl
-about=Diese Seite wird dynamisch übersetzt.
+langSelection=Sprachwahl:
+about=Diese Seite wurde dynamisch übersetzt.
+

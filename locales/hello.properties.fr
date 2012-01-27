@@ -1,0 +1,8 @@
+# French translation
+# vim: ft=jproperties
+
+hello=Bonjour !
+hello.accesskey=b
+hello.title=cliquez-moi !
+sayHello=Bonjour Mozilla !\nBonjour, le monde !
+
