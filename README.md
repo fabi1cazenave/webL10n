@@ -12,8 +12,10 @@ HTML Markup
 
 L10n resource files are linked to the HTML document like this:
 
-    <link rel="resource" type="text/l10n"       href="locales/hello.intl" />
-    <link rel="resource" type="text/properties" href="locales/data.properties" />
+```html
+<link rel="resource" type="text/l10n"       href="locales/hello.intl" />
+<link rel="resource" type="text/properties" href="locales/data.properties" />
+```
 
 * rel: resource (any better idea?)
 * type: text/l10n (Mozilla l20n files) or text/properties (Java-like properties)
