@@ -71,8 +71,6 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseProperties(text) {
-    gTextData += text;
-
     // parse the *.properties file into an associative array
     var data = [];
     var entries = text.replace(/^\s*|\s*$/, '').split(/[\r\n]+/);
@@ -105,8 +103,6 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseL20n(text) {
-    gTextData += text;
-
     function nextEntity() {
       while (true) {
         var match = /\/\*|</.exec(text);
@@ -199,44 +195,41 @@ var l10n = (function(window, document, undefined) {
     }
   }
 
-  function l10nResource(href, parser) {
-    function loadSync(src, success, failure) { // synchronous
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', src, false);
-      xhr.send(null);
-      if (xhr.status === 200)
-        parser(xhr.responseText);
-      else
-        failure();
+  function parse(text, type) {
+    gTextData += text;
+    switch (type) {
+      case 'text/properties':
+        return parseProperties(text);
+      case 'text/l10n':
+        return parseL20n(text);
+      default:
+        if (/^\s*(#|[a-zA-Z])/.test(text))
+          return parseProperties(text);
+        if (/^\s*(\/\*|<)/.test(text))
+          return parseL20n(text);
     }
-    function loadAsync(src, success, failure) { // asynchronous
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', src, true);
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          if (xhr.status == 200) {
-            parser(xhr.responseText);
-            success();
-          } else {
-            failure();
-          }
-        }
-      };
-      xhr.send(null);
-    }
-    // load asynchronously if `callback' is specified, synchronously otherwise
-    this.load = function(lang, callback) {
-      var applied = lang;
-      var loadL10nFile = callback ? loadAsync : loadSync;
-      loadL10nFile(href + '.' + lang, callback, function() {
-        // load default l10n resource file if not found
-        loadL10nFile(href, callback, callback);
-        applied = '';
-      });
-      return applied; // return lang if found, an empty string if not found
-    };
   }
 
+  // load and parse the specified resource file
+  function loadResource(href, type, onSuccess, onFailure) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', href, true);
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200) {
+          parse(xhr.responseText, type);
+          if (onSuccess)
+            onSuccess();
+        } else {
+          if (onFailure)
+            onFailure();
+        }
+      }
+    };
+    xhr.send(null);
+  }
+
+  // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
     gL10nData = {};
     gTextData = '';
@@ -244,47 +237,51 @@ var l10n = (function(window, document, undefined) {
 
     // check all <link type="text/l10n" src="..." /> nodes
     // and load the resource files
-    var langLink = document.querySelectorAll(
+    var langLinks = document.querySelectorAll(
         'link[type="text/l10n"], link[type="text/properties"]');
-    var langCount = langLink.length;
+    var langCount = langLinks.length;
 
     // start the callback when all resources are loaded
     var onResourceLoaded = null;
-    if (callback) {
-      var gCount = 0;
-      onResourceLoaded = function() {
-        gCount++;
-        if (gCount >= langCount) {
+    var gResourceCount = 0;
+    onResourceLoaded = function() {
+      gResourceCount++;
+      if (gResourceCount >= langCount) {
+        // execute the [optional] callback
+        if (callback)
           callback();
-          // fire an 'l10nLocaleLoaded' DOM event
-          var evtObject = document.createEvent('Event');
-          evtObject.initEvent('l10nLocaleLoaded', false, false);
-          window.dispatchEvent(evtObject);
-        }
+        // fire an 'l10nLocaleLoaded' DOM event
+        var evtObject = document.createEvent('Event');
+        evtObject.initEvent('l10nLocaleLoaded', false, false);
+        window.dispatchEvent(evtObject);
       }
     }
 
     // load all resource files
+    function l10nResourceLink(href, type) {
+      this.load = function(lang, callback) {
+        var applied = lang;
+        loadResource(href + '.' + lang, type, callback, function() {
+          // load default l10n resource file if not found
+          loadResource(href, type, callback, callback);
+          applied = '';
+        });
+        return applied; // return lang if found, an empty string if not found
+      };
+    }
     for (var i = 0; i < langCount; i++) {
-      var parser = (langLink[i].type == 'text/l10n') ?
-        parseL20n : parseProperties;
-      var resource = new l10nResource(langLink[i].href, parser);
+      var link = langLinks[i];
+      var parser = (link.type == 'text/l10n') ?  parseL20n : parseProperties;
+      var resource = new l10nResourceLink(link.href, parser);
       var rv = resource.load(lang, onResourceLoaded);
       if (rv != lang) // lang not found, used default resource instead
         gLanguage = '';
     }
   }
 
+  // load the default locale on startup
   window.addEventListener('DOMContentLoaded', function() {
-    var async = true;
-    if (async) {
-      // asynchronous (recommended on non-local files)
-      loadLocale(navigator.language, translate);
-    } else {
-      // synchronous (much faster but risky)
-      loadLocale(navigator.language);
-      translate();
-    }
+    loadLocale(navigator.language, translate);
   }, false);
 
   return {
@@ -296,8 +293,9 @@ var l10n = (function(window, document, undefined) {
     set language(lang) { loadLocale(lang, translate); },
     get text() { return gTextData; },
     get data() { return gL10nData; },
-    translate: translate,
-    load: loadLocale
+    loadResource: loadResource,
+    loadLocale: loadLocale,
+    translate: translate
   };
 })(window, document);
 

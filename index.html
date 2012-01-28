@@ -3,8 +3,8 @@
 <head>
   <title> l20n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="text/l10n" href="locales/data.intl" />
-  <link rel="resource" type="text/l10n" href="locales/hello.intl" />
+  <link rel="resource" type="text/l10n"       href="locales/hello.intl" />
+  <link rel="resource" type="text/properties" href="locales/data.properties" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     window.addEventListener('l10nLocaleLoaded', function() {
@@ -15,6 +15,42 @@
     }, false);
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
+  <style type="text/css">
+    html, body {
+      background-color: #eee;
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      display: -webkit-box;
+      display: -moz-box;
+      display: box;
+      -webkit-box-orient: vertical;
+      -moz-box-orient: vertical;
+      box-orient: vertical;
+    }
+    #demo div {
+      max-width: 600px;
+      margin: 1em auto;
+      padding: 0 1em;
+      border: 1px dashed black;
+    }
+    #l10n, #json {
+      margin: 0;
+      padding: 0.2em;
+      -webkit-box-orient: vertical;
+      -moz-box-orient: vertical;
+      box-orient: vertical;
+    }
+    #l10n, #json, textarea, #data {
+      display: -webkit-box;
+      display: -moz-box;
+      display: box;
+      -webkit-box-flex: 1;
+      -moz-box-flex: 1;
+      box-flex: 1;
+    }
+  </style>
 </head>
 <body>
   <div id="demo">
