@@ -35,6 +35,9 @@ Translatable elements carry data-l10n- attributes:
 JavaScript API
 --------------
 
+This API is a work in progress. We intend to reuse the l20n one, but if you want
+to try this library right now, here's how it goes.
+
 The whole library exposes an 'l10n' object:
 
 * l10n.get(key) : get the translation corresponding to the `key' identifier
@@ -45,7 +48,7 @@ The whole library exposes an 'l10n' object:
 * l10n.loadLocale    : load and parse all resource files for a locale
 * l10n.translate     : translate the target node (default = whole document)
 
-Note: _() is a shortcut for l10n.get()
+Note: \_() is a shortcut for l10n.get()
 
 The 'l10nLocaleLoaded' event is fired when all files corresponding to the
 current locale have been loaded and parsed.

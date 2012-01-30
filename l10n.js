@@ -25,39 +25,7 @@ var l10n = (function(window, document, undefined) {
   var gTextData = '';
   var gLanguage = '';
 
-  function translate(fragment) {
-    fragment = fragment || document;
-
-    // list of translatable attributes
-    var attrList = ['title', 'accesskey', 'alt', 'longdesc'];
-    var attrCount = attrList.length;
-
-    // check all translatable elements (= w/ a `data-l10n-id' attribute)
-    var elements = fragment.querySelectorAll('*[data-l10n-id]');
-    var elementCount = elements.length;
-    for (var i = 0; i < elementCount; i++) {
-      var element = elements[i];
-
-      // translate the element
-      var key = element.dataset.l10nId;
-      var data = gL10nData[key];
-      if (!data)
-        continue;
-
-      // element content
-      element.innerHTML = data.value || data;
-
-      // element attributes
-      if (data.attributes) {
-        for (var j = 0; j < attrCount; j++) {
-          var attrName = attrList[j];
-          var attrValue = data.attributes[attrName];
-          if (attrValue && element.hasAttribute(attrName))
-            element.setAttribute(attrName, attrValue);
-        }
-      }
-    }
-  }
+  // parser
 
   function evalString(text) {
     return text.replace(/\\\\/g, '\\')
@@ -91,7 +59,7 @@ var l10n = (function(window, document, undefined) {
         hasAttribute = (elt in data);
       }
       if (hasAttribute) {
-        if (typeof gL10nData[elt] == 'string') {
+        if (typeof gL10nData[elt] === 'string') {
           gL10nData[elt] = {};
           gL10nData[elt].value = data[elt];
           gL10nData[elt].attributes = {};
@@ -103,6 +71,13 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseL20n(text) {
+    /** http://zbraniecki.github.com/l20n/docs/grammar.html
+      * there seems to be a few inconsistencies with this spec:
+      * - the string delimiter is a double quote, not a single one
+      * - the value is optional
+      */
+
+    // utilities
     function nextEntity() {
       while (true) {
         var match = /\/\*|</.exec(text);
@@ -116,17 +91,20 @@ var l10n = (function(window, document, undefined) {
             text = text.substr(end + 2);
             break;
           case '<': // entity or macro
-            text = text.substr(match.index);
+            text = text.substr(match.index + 1);
             return true;
             break;
         }
       }
       return true;
     }
-    function nextMatch(re) {
+    function nextMatch(re, doNotRaiseException) {
       var match = re.exec(text);
-      if (!match || !match.length)
+      if (!match || !match.length) {
+        if (!doNotRaiseException)
+          throw 'l10n parsing error: ' + text.substring(0, 128);
         return null;
+      }
       var rv = {
         value: text.substring(0, match.index),
         token: match[0],
@@ -135,63 +113,140 @@ var l10n = (function(window, document, undefined) {
       text = text.substr(match.index + match[0].length);
       return rv;
     }
+    function readIdentifier() {
+      var id = nextMatch(/^\s*[a-zA-Z]\w*/, true);
+      return id ? id.token.replace(/^\s*/, '') : null;
+    }
     function readString() {
-      //var value = nextMatch(/"/).value;
-      // XXX we need a way to ignore \" sequences more properly
-      var rv = nextMatch(/[^\\]"/);
-      return evalString(rv.value + rv.token[0]);
+      var i = 0;
+      var str = '';
+      var len = text.length;
+      var escapeMode = false;
+      var delimFound = false;
+      var delim = nextMatch(/['"]/).token;
+      while (!delimFound && (i < len)) {
+        if (escapeMode)
+          escapeMode = false;
+        else {
+          escapeMode = (text[i] == '\\');
+          delimFound = (text[i] == delim);
+        }
+        i++;
+      }
+      if (delimFound) {
+        str = evalString(text.substring(0, i - 1));
+        text = text.substr(i);
+      }
+      return str;
+    }
+    function readArray() {
+      nextMatch(/\[/);
+      var table = [];
+      var value = readValue();
+      while (value) {
+        table.push(value);
+        if (!nextMatch(/^\s*,\s*/, true))
+          break;
+        value = readValue();
+      }
+      nextMatch(/\]/);
+      return table;
+    }
+    function readHash() {
+      nextMatch(/\{/);
+      var hash = {};
+      var id = readIdentifier();
+      while (id) {
+        nextMatch(/\s*:\s*/);
+        hash[id] = readValue();
+        if (!nextMatch(/^\s*,\s*/, true))
+          break;
+        id = readIdentifier();
+      }
+      nextMatch(/\}/);
+      return hash;
+    }
+    function readAttributes() {
+      var attributes = {};
+      var empty = true;
+      var id = readIdentifier();
+      while (id) {
+        nextMatch(/\s*:\s*/);
+        attributes[id] = readValue();
+        id = readIdentifier();
+        empty = false;
+      }
+      return empty ? null : attributes;
     }
     function readValue() {
-      //var token = nextMatch(/"/).token;
-      //var token = nextMatch(/["\[\{]/).token;
-      switch (nextMatch(/["\[\{]/).token) {
+      var match = (/^\s*['"\[\{]/).exec(text);
+      if (!match || !match.length)
+        return null;
+      var token = match[0];
+      switch (token[token.length - 1]) {
         case '"':
+        case "'":
           return readString();
           break;
         case '[':
-          return []; // TODO: readArray();
+          return readArray();
           break;
         case '{':
-          return {}; // TODO: readHash();
+          return readHash();
           break;
       }
       return null;
     }
-    while (nextEntity()) {
-      // now expecting an identifier
-      var id = nextMatch(/[a-zA-Z]\w*/).token;
+    function readMacro() {
+      // TODO: proper macro handling
+      nextMatch(/\{\s*/);
+      var match = nextMatch(/\s*\}/);
+      if (!match)
+        return null;
+      return match.value;
+    }
 
-      // XXX ignoring macros and indexes atm
+    // parsing loop
+    while (nextEntity()) {
+      var id = readIdentifier();
+
+      // possible index or macro param
+      var index = '';
+      var param = '';
       switch (text[0]) {
         case '[': // index
+          nextMatch(/\[/).token;
+          index = nextMatch(/\]/).value;
           break;
-        case '(': // macro
+        case '(': // macro param
+          nextMatch(/\(/).token;
+          param = nextMatch(/\)/).value;
           break;
       }
 
-      // now expecting a value: string|array|hash
-      var value = readValue();
-
-      // now expecting either key-value pairs or the end of the entity
-      var attributes = {};
-      var hasAttrs = false;
-      var endOfEntity = false;
-      while (!endOfEntity) {
-        var match = nextMatch(/[a-zA-Z]\w*|>/);
-        if (match && (match.token != '>')) {
-          nextMatch(/\s*:\s*/);
-          attributes[match.token] = readValue();
-          hasAttrs = true;
-        } else
-          endOfEntity = true;
-      }
-      if (hasAttrs) {
-        //gL10nData[id] = new String(value);
+      // value and attributes
+      if (!param) { // entity (= general case)
+        var value = readValue();           // (optional) string | array | hash
+        var attributes = readAttributes(); // (optional) key-value pairs
+        if (!attributes && !index) {       // plain string (= general case)
+          gL10nData[id] = value;
+        } else {
+          gL10nData[id] = {};
+          if (index)
+            gL10nData[id].index = index;
+          if (value)
+            gL10nData[id].value = value;
+          if (attributes)
+            gL10nData[id].attributes = attributes;
+        }
+      } else { // macro
         gL10nData[id] = {};
-        gL10nData[id].value = value;
-        gL10nData[id].attributes = attributes;
-      } else
-        gL10nData[id] = value;
+        gL10nData[id].param = param;
+        gL10nData[id].macro = readMacro();
+      }
+
+      // end of entity
+      nextMatch(/>/);
     }
   }
 
@@ -208,6 +263,7 @@ var l10n = (function(window, document, undefined) {
         if (/^\s*(\/\*|<)/.test(text))
           return parseL20n(text);
     }
+    return null;
   }
 
   // load and parse the specified resource file
@@ -231,9 +287,7 @@ var l10n = (function(window, document, undefined) {
 
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
-    gL10nData = {};
-    gTextData = '';
-    gLanguage = lang;
+    clear();
 
     // check all <link type="text/l10n" src="..." /> nodes
     // and load the resource files
@@ -258,7 +312,9 @@ var l10n = (function(window, document, undefined) {
     }
 
     // load all resource files
-    function l10nResourceLink(href, type) {
+    function l10nResourceLink(link) {
+      var href = link.href;
+      var type = link.type;
       this.load = function(lang, callback) {
         var applied = lang;
         loadResource(href + '.' + lang, type, callback, function() {
@@ -269,14 +325,55 @@ var l10n = (function(window, document, undefined) {
         return applied; // return lang if found, an empty string if not found
       };
     }
+    gLanguage = lang;
     for (var i = 0; i < langCount; i++) {
-      var link = langLinks[i];
-      var parser = (link.type == 'text/l10n') ?  parseL20n : parseProperties;
-      var resource = new l10nResourceLink(link.href, parser);
+      var resource = new l10nResourceLink(langLinks[i]);
       var rv = resource.load(lang, onResourceLoaded);
       if (rv != lang) // lang not found, used default resource instead
         gLanguage = '';
     }
+  }
+
+  // translate an element
+  function translate(element) {
+    element = element || document;
+
+    // list of translatable attributes
+    var attrList = ['title', 'accesskey', 'alt', 'longdesc'];
+    var attrCount = attrList.length;
+
+    // check all translatable children (= w/ a `data-l10n-id' attribute)
+    var children = element.querySelectorAll('*[data-l10n-id]');
+    var elementCount = children.length;
+    for (var i = 0; i < elementCount; i++) {
+      var child = children[i];
+
+      // translate the child
+      var key = child.dataset.l10nId;
+      var data = gL10nData[key];
+      if (!data)
+        continue;
+
+      // child content
+      child.innerHTML = data.value || data;
+
+      // child attributes
+      if (data.attributes) {
+        for (var j = 0; j < attrCount; j++) {
+          var attrName = attrList[j];
+          var attrValue = data.attributes[attrName];
+          if (attrValue && child.hasAttribute(attrName))
+            child.setAttribute(attrName, attrValue);
+        }
+      }
+    }
+  }
+
+  // clear all l10n data
+  function clear() {
+    gL10nData = {};
+    gTextData = '';
+    gLanguage = '';
   }
 
   // load the default locale on startup
@@ -295,7 +392,8 @@ var l10n = (function(window, document, undefined) {
     get data() { return gL10nData; },
     loadResource: loadResource,
     loadLocale: loadLocale,
-    translate: translate
+    translate: translate,
+    clear: clear
   };
 })(window, document);
 

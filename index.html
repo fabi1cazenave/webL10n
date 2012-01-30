@@ -16,44 +16,20 @@
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
-    html, body {
-      background-color: #eee;
-      height: 100%;
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      display: -webkit-box;
-      display: -moz-box;
-      display: box;
-      -webkit-box-orient: vertical;
-      -moz-box-orient: vertical;
-      box-orient: vertical;
-    }
-    #demo div {
+    #test div {
       max-width: 600px;
       margin: 1em auto;
       padding: 0 1em;
       border: 1px dashed black;
     }
-    #l10n, #json {
+    #data p {
+      height: 1em;
       margin: 0;
-      padding: 0.2em;
-      -webkit-box-orient: vertical;
-      -moz-box-orient: vertical;
-      box-orient: vertical;
-    }
-    #l10n, #json, textarea, #data {
-      display: -webkit-box;
-      display: -moz-box;
-      display: box;
-      -webkit-box-flex: 1;
-      -moz-box-flex: 1;
-      box-flex: 1;
     }
   </style>
 </head>
 <body>
-  <div id="demo">
+  <div id="test">
     <div>
       <p data-l10n-id="about">This section is translated dynamically</p>
       <p style="text-align: center;">
@@ -79,12 +55,12 @@
   </div>
   <div id="data">
     <div id="l10n">
-      <p> l10n resource: </p>
-      <textarea></textarea>
+      <p> l10n resource files: <small>(l20n + properties)</small></p>
+      <textarea readonly></textarea>
     </div>
     <div id="json">
-      <p> parsed resource: </p>
-      <textarea></textarea>
+      <p> parsed data:  <small>(json)</small></p>
+      <textarea readonly></textarea>
     </div>
   </div>
 </body>
