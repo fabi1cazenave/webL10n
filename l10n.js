@@ -34,6 +34,8 @@ var l10n = (function(window, document, undefined) {
                .replace(/\\t/g, '\t')
                .replace(/\\b/g, '\b')
                .replace(/\\f/g, '\f')
+               .replace(/\\{/g, '{')
+               .replace(/\\}/g, '}')
                .replace(/\\"/g, '"')
                .replace(/\\'/g, "'");
   }
@@ -113,28 +115,76 @@ var l10n = (function(window, document, undefined) {
       text = text.substr(match.index + match[0].length);
       return rv;
     }
+
+    // entity parser
     function readIdentifier() {
       var id = nextMatch(/^\s*[a-zA-Z]\w*/, true);
       return id ? id.token.replace(/^\s*/, '') : null;
     }
     function readString() {
-      var i = 0;
+      // string separator: ', ", ''', """
+      // escape sequences: \, {{...}}
       var str = '';
       var len = text.length;
       var escapeMode = false;
+      var expandMode = false;
       var delimFound = false;
-      var delim = nextMatch(/['"]/).token;
+      var delim = nextMatch(/'''|"""|['"]/).token;
+      var checkDelim = (delim.length == 1) ?
+        function(pos) {
+          return (text[pos] == delim);
+        } : function(pos) {
+          return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
+        };
+      var i = 0;
       while (!delimFound && (i < len)) {
         if (escapeMode)
           escapeMode = false;
+        else if (expandMode)
+          expandMode = (text[i] != '}') || (text[i - 1] != '}');
         else {
+          delimFound = checkDelim(i);
           escapeMode = (text[i] == '\\');
-          delimFound = (text[i] == delim);
+          expandMode = (i > 0) && (text[i] == '{') && (text[i - 1] == '{');
         }
         i++;
       }
       if (delimFound) {
-        str = evalString(text.substring(0, i - 1));
+        str = evalString(text.substring(0, i - delim.length));
+        text = text.substr(i);
+      }
+      return str;
+    }
+    function readSplitString() {
+      // string separator: ', ", ''', """
+      // escape sequences: \, {{...}}
+      var str = '';
+      var len = text.length;
+      var escapeMode = false;
+      var expandMode = false;
+      var delimFound = false;
+      var delim = nextMatch(/'''|"""|['"]/).token;
+      var checkDelim = (delim.length == 1) ?
+        function(pos) {
+          return (text[pos] == delim);
+        } : function(pos) {
+          return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
+        };
+      var i = 0;
+      while (!delimFound && (i < len)) {
+        if (escapeMode)
+          escapeMode = false;
+        else if (expandMode)
+          expandMode = (text[i] != '}') || (text[i - 1] != '}');
+        else {
+          delimFound = checkDelim(i);
+          escapeMode = (text[i] == '\\');
+          expandMode = (i > 0) && (text[i] == '{') && (text[i - 1] == '{');
+        }
+        i++;
+      }
+      if (delimFound) {
+        str = evalString(text.substring(0, i - delim.length));
         text = text.substr(i);
       }
       return str;
@@ -206,6 +256,10 @@ var l10n = (function(window, document, undefined) {
       return match.value;
     }
 
+    // expression parser
+    function readExpression() {
+    }
+
     // parsing loop
     while (nextEntity()) {
       var id = readIdentifier();
@@ -239,6 +293,16 @@ var l10n = (function(window, document, undefined) {
           if (attributes)
             gL10nData[id].attributes = attributes;
         }
+        /* } else {
+          if (value)
+            gL10nData[id] = new String(value);
+          else
+            gL10nData[id] = {};
+          if (index)
+            gL10nData[id].index = index;
+          if (attributes)
+            gL10nData[id].attributes = attributes;
+        } */
       } else { // macro
         gL10nData[id] = {};
         gL10nData[id].params = params;
