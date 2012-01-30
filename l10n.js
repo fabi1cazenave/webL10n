@@ -210,22 +210,22 @@ var l10n = (function(window, document, undefined) {
     while (nextEntity()) {
       var id = readIdentifier();
 
-      // possible index or macro param
+      // possible index or macro params
       var index = '';
-      var param = '';
+      var params = [];
       switch (text[0]) {
         case '[': // index
-          nextMatch(/\[/).token;
+          nextMatch(/\[\s*/);
           index = nextMatch(/\]/).value;
           break;
-        case '(': // macro param
-          nextMatch(/\(/).token;
-          param = nextMatch(/\)/).value;
+        case '(': // macro params
+          nextMatch(/\(\s*/);
+          params = nextMatch(/\)/).value.split(/\s*,\s*/);
           break;
       }
 
       // value and attributes
-      if (!param) { // entity (= general case)
+      if (!params.length) { // entity (= general case)
         var value = readValue();           // (optional) string | array | hash
         var attributes = readAttributes(); // (optional) key-value pairs
         if (!attributes && !index) {       // plain string (= general case)
@@ -241,7 +241,7 @@ var l10n = (function(window, document, undefined) {
         }
       } else { // macro
         gL10nData[id] = {};
-        gL10nData[id].param = param;
+        gL10nData[id].params = params;
         gL10nData[id].macro = readMacro();
       }
 
