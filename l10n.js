@@ -127,7 +127,6 @@ var l10n = (function(window, document, undefined) {
       var str = '';
       var len = text.length;
       var escapeMode = false;
-      var expandMode = false;
       var delimFound = false;
       var delim = nextMatch(/'''|"""|['"]/).token;
       var checkDelim = (delim.length == 1) ?
@@ -136,16 +135,16 @@ var l10n = (function(window, document, undefined) {
         } : function(pos) {
           return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
         };
+
       var i = 0;
       while (!delimFound && (i < len)) {
         if (escapeMode)
           escapeMode = false;
-        else if (expandMode)
-          expandMode = (text[i] != '}') || (text[i - 1] != '}');
         else {
           delimFound = checkDelim(i);
           escapeMode = (text[i] == '\\');
-          expandMode = (i > 0) && (text[i] == '{') && (text[i - 1] == '{');
+          if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{'))
+            i = text.indexOf('}}', i);
         }
         i++;
       }
@@ -161,7 +160,6 @@ var l10n = (function(window, document, undefined) {
       var str = '';
       var len = text.length;
       var escapeMode = false;
-      var expandMode = false;
       var delimFound = false;
       var delim = nextMatch(/'''|"""|['"]/).token;
       var checkDelim = (delim.length == 1) ?
@@ -170,24 +168,35 @@ var l10n = (function(window, document, undefined) {
         } : function(pos) {
           return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
         };
+
+      // same as readString() but splits the string when {{extends}} are found
       var i = 0;
+      var last = 0;
+      var output = [];
       while (!delimFound && (i < len)) {
         if (escapeMode)
           escapeMode = false;
-        else if (expandMode)
-          expandMode = (text[i] != '}') || (text[i - 1] != '}');
         else {
           delimFound = checkDelim(i);
           escapeMode = (text[i] == '\\');
-          expandMode = (i > 0) && (text[i] == '{') && (text[i - 1] == '{');
+          if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{')) {
+            if (i > 1)
+              output.push(evalString(text.substring(last, i - 1)));
+            last = i - 1;
+            i = text.indexOf('}}', last) + 2;
+            output.push(evalString(text.substring(last, i)));
+            last = i--;
+          }
         }
         i++;
       }
       if (delimFound) {
-        str = evalString(text.substring(0, i - delim.length));
+        str = evalString(text.substring(last, i - delim.length));
+        if (str.length)
+          output.push(str);
         text = text.substr(i);
-      }
-      return str;
+      } // else => trow exception
+      return last ? output : str;
     }
     function readArray() {
       nextMatch(/\[/);
@@ -236,7 +245,8 @@ var l10n = (function(window, document, undefined) {
       switch (token[token.length - 1]) {
         case '"':
         case "'":
-          return readString();
+          //return readString();
+          return readSplitString();
           break;
         case '[':
           return readArray();
@@ -248,7 +258,7 @@ var l10n = (function(window, document, undefined) {
       return null;
     }
     function readMacro() {
-      // TODO: proper macro handling
+      // TODO: proper expression handling
       nextMatch(/\{\s*/);
       var match = nextMatch(/\s*\}/);
       if (!match)
