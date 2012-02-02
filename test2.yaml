@@ -39,9 +39,9 @@ drinks[type,num]:
     one: Pot
     many: Pots
 
-# macros (notice the backtick delimiter for expressions)
+# macros
 
-plural(n): {` n == 1 ? 'one' : 'many' `}
+plural(n): { n == 1 ? 'one' : 'many' }
 drinks[plural(num)]:
   one: Cup
   many: Cups
