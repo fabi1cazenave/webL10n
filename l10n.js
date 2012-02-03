@@ -80,6 +80,10 @@ var l10n = (function(window, document, undefined) {
       */
 
     // utilities
+    function assert(test) {
+      if (!test)
+        throw 'l10n parsing error: ' + text.substring(0, 128);
+    }
     function nextEntity() {
       while (true) {
         var match = /\/\*|</.exec(text);
@@ -103,8 +107,7 @@ var l10n = (function(window, document, undefined) {
     function nextMatch(re, doNotRaiseException) {
       var match = re.exec(text);
       if (!match || !match.length) {
-        if (!doNotRaiseException)
-          throw 'l10n parsing error: ' + text.substring(0, 128);
+        assert(doNotRaiseException);
         return null;
       }
       var rv = {
@@ -121,123 +124,133 @@ var l10n = (function(window, document, undefined) {
       var id = nextMatch(/^\s*[a-zA-Z]\w*/, true);
       return id ? id.token.replace(/^\s*/, '') : null;
     }
-    function readString() {
-      // string separator: ', ", ''', """
-      // escape sequences: \, {{...}}
-      var str = '';
-      var len = text.length;
-      var escapeMode = false;
-      var delimFound = false;
-      var delim = nextMatch(/'''|"""|['"]/).token;
-      var checkDelim = (delim.length == 1) ?
-        function(pos) {
-          return (text[pos] == delim);
-        } : function(pos) {
-          return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
-        };
-
-      var i = 0;
-      while (!delimFound && (i < len)) {
-        if (escapeMode)
-          escapeMode = false;
-        else {
-          delimFound = checkDelim(i);
-          escapeMode = (text[i] == '\\');
-          if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{'))
-            i = text.indexOf('}}', i);
-        }
-        i++;
-      }
-      if (delimFound) {
-        str = evalString(text.substring(0, i - delim.length));
-        text = text.substr(i);
-      }
-      return str;
-    }
-    function readSplitString() {
-      // string separator: ', ", ''', """
-      // escape sequences: \, {{...}}
-      var str = '';
-      var len = text.length;
-      var escapeMode = false;
-      var delimFound = false;
-      var delim = nextMatch(/'''|"""|['"]/).token;
-      var checkDelim = (delim.length == 1) ?
-        function(pos) {
-          return (text[pos] == delim);
-        } : function(pos) {
-          return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
-        };
-
-      // same as readString() but splits the string when {{extends}} are found
-      var i = 0;
-      var last = 0;
-      var output = [];
-      while (!delimFound && (i < len)) {
-        if (escapeMode)
-          escapeMode = false;
-        else {
-          delimFound = checkDelim(i);
-          escapeMode = (text[i] == '\\');
-          if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{')) {
-            if (i > 1)
-              output.push(evalString(text.substring(last, i - 1)));
-            last = i - 1;
-            i = text.indexOf('}}', last) + 2;
-            output.push(evalString(text.substring(last, i)));
-            last = i--;
-          }
-        }
-        i++;
-      }
-      if (delimFound) {
-        str = evalString(text.substring(last, i - delim.length));
-        if (str.length)
-          output.push(str);
-        text = text.substr(i);
-      } // else => trow exception
-      return last ? output : str;
-    }
-    function readArray() {
-      nextMatch(/\[/);
-      var table = [];
-      var value = readValue();
-      while (value) {
-        table.push(value);
-        if (!nextMatch(/^\s*,\s*/, true))
-          break;
-        value = readValue();
-      }
-      nextMatch(/\]/);
-      return table;
-    }
-    function readHash() {
-      nextMatch(/\{/);
-      var hash = {};
-      var id = readIdentifier();
-      while (id) {
-        nextMatch(/\s*:\s*/);
-        hash[id] = readValue();
-        if (!nextMatch(/^\s*,\s*/, true))
-          break;
-        id = readIdentifier();
-      }
-      nextMatch(/\}/);
-      return hash;
-    }
     function readAttributes() {
       var attributes = {};
       var empty = true;
       var id = readIdentifier();
       while (id) {
-        nextMatch(/\s*:\s*/);
+        nextMatch(/^\s*:\s*/);
         attributes[id] = readValue();
         id = readIdentifier();
         empty = false;
       }
       return empty ? null : attributes;
     }
+    function readMacro() {
+      nextMatch(/\{\s*/);
+      var expr = readExpression();
+      nextMatch(/^\s*\}/);
+      return expr;
+    }
+
+    // value parser (string|array|list)
     function readValue() {
+      function getString() {
+        // string separator: ', ", ''', """
+        // escape sequences: \, {{...}}
+        var str = '';
+        var len = text.length;
+        var escapeMode = false;
+        var delimFound = false;
+        var delim = nextMatch(/'''|"""|['"]/).token;
+        var checkDelim = (delim.length == 1) ?
+          function(pos) {
+            return (text[pos] == delim);
+          } : function(pos) {
+            return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
+          };
+
+        var i = 0;
+        while (!delimFound && (i < len)) {
+          if (escapeMode)
+            escapeMode = false;
+          else {
+            delimFound = checkDelim(i);
+            escapeMode = (text[i] == '\\');
+            if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{'))
+              i = text.indexOf('}}', i);
+          }
+          i++;
+        }
+        if (delimFound) {
+          str = evalString(text.substring(0, i - delim.length));
+          text = text.substr(i);
+        }
+        return str;
+      }
+      function getSplitString() {
+        // string separator: ', ", ''', """
+        // escape sequences: \, {{...}}
+        var str = '';
+        var len = text.length;
+        var escapeMode = false;
+        var delimFound = false;
+        var delim = nextMatch(/'''|"""|['"]/).token;
+        var checkDelim = (delim.length == 1) ?
+          function(pos) {
+            return (text[pos] == delim);
+          } : function(pos) {
+            return (pos > 2) && (text.substring(pos - 2, pos + 1) == delim);
+          };
+
+        // same as readString() but splits the string when {{extends}} are found
+        var i = 0;
+        var last = 0;
+        var output = [];
+        while (!delimFound && (i < len)) {
+          if (escapeMode)
+            escapeMode = false;
+          else {
+            delimFound = checkDelim(i);
+            escapeMode = (text[i] == '\\');
+            if ((i > 0) && (text[i] == '{') && (text[i - 1] == '{')) {
+              if (i > 1)
+                output.push(evalString(text.substring(last, i - 1)));
+              last = i - 1;
+              i = text.indexOf('}}', last) + 2;
+              output.push(evalString(text.substring(last, i)));
+              last = i--;
+            }
+          }
+          i++;
+        }
+        if (delimFound) {
+          str = evalString(text.substring(last, i - delim.length));
+          if (str.length)
+            output.push(str);
+          text = text.substr(i);
+        } // else => trow exception
+        return last ? output : str;
+      }
+      function getArray() {
+        nextMatch(/^\s*\[/);
+        var table = [];
+        var value = readValue();
+        while (value) {
+          table.push(value);
+          if (!nextMatch(/^\s*,\s*/, true))
+            break;
+          value = readValue();
+        }
+        nextMatch(/^\s*\]/);
+        return table;
+      }
+      function getList() {
+        nextMatch(/^\s*\{/);
+        var list = {};
+        var id = readIdentifier();
+        while (id) {
+          nextMatch(/^\s*:\s*/);
+          list[id] = readValue();
+          if (!nextMatch(/^\s*,\s*/, true))
+            break;
+          id = readIdentifier();
+        }
+        nextMatch(/^\s*\}/);
+        return list;
+      }
+
+      // return a string|array|list according to the first token
       var match = (/^\s*['"\[\{]/).exec(text);
       if (!match || !match.length)
         return null;
@@ -245,29 +258,174 @@ var l10n = (function(window, document, undefined) {
       switch (token[token.length - 1]) {
         case '"':
         case "'":
-          //return readString();
-          return readSplitString();
+          //return getString();
+          return getSplitString();
           break;
         case '[':
-          return readArray();
+          return getArray();
           break;
         case '{':
-          return readHash();
+          return getList();
           break;
       }
       return null;
     }
-    function readMacro() {
-      // TODO: proper expression handling
-      nextMatch(/\{\s*/);
-      var match = nextMatch(/\s*\}/);
-      if (!match)
-        return null;
-      return match.value;
-    }
 
     // expression parser
     function readExpression() {
+      function next(re) {
+        var match = re.exec(text);
+        if (!match || !match.length)
+          return null;
+        text = text.substr(match.index + match[0].length);
+        return match[0].replace(/^\s*/, '');
+      }
+      function check(re) {
+        var rv = next(re);
+        assert(rv);
+        return rv;
+      }
+
+      // member parsing
+      function getPrimary() { // (expression) | number | value | ID
+        if (next(/^\s*\(\s*/)) {          // (expression)
+          var expr = readExpression();
+          check(/^\s*\)/);
+          return { expression: expr };
+        }
+        if (/^\s*[0-9]\w*/.test(text))    // number
+          return next(/^\s*[0-9]\w*/);
+        if (/^\s*['"\[\{]/.test(text))    // value
+          return readValue();
+        if (/^\s*[a-zA-Z]\w*/.test(text)) // ID
+          return readIdentifier();
+        return null;
+      }
+      function getMember() {  // primary | attr | prop | call
+        // simple case: parenthesis | number | value | ID
+        var primary = getPrimary();
+        if (primary)
+          return primary;
+
+        // tricky case: call | property | attr
+        var member = getMember();
+        var isID = (typeof member === 'string') && /^[a-zA-z]+$/.test(member);
+        var expr, id;
+
+        // attr: member[.expression] | ID..ID
+        var attrSep = next(/^\.\.|^\s*\[\./);
+        if (attrSep) {
+          if (attrSep == '[.') {
+            expr = readExpression();
+            check(/^\s*\]/);
+            return {
+              attr: {
+                member: member,
+                expression: expr
+              }
+            }
+          }
+          if (isID && (attrSep == '..')) {
+            id = check(/^[a-zA-Z]\w*/);
+            return {
+              attr: {
+                member: member,
+                id: id
+              }
+            }
+          }
+          assert();
+        }
+
+        // prop: member[expression] | ID.ID
+        var propSep = next(/^\.|^\s*\[/);
+        if (propSep) {
+          if (propSep == '[') {
+            expr = readExpression();
+            check(/^\s*\]/);
+            return {
+              prop: {
+                member: member,
+                expression: expr
+              }
+            }
+          }
+          if (isID && (propSep == '.')) {
+            id = check(/^[a-zA-Z]\w*/);
+            return {
+              prop: {
+                member: member,
+                id: id
+              }
+            }
+          }
+          assert();
+        }
+
+        // call: member(expression, ...)
+        var callSep = next(/^\s*\(/);
+        if (callSep) {
+          // TODO
+          return check(/\)/);
+        }
+
+        // syntax error
+        assert();
+        return null;
+      }
+
+      // condition parsing
+      const reUnaryOp   = /^\s*[+\-!]/;
+      const reBinaryOp  = /^\s*(==|!=|<=|>=|\+|\-|\*|\/|%)/;
+      const reLogicalOp = /^\s*(\|\||\&\&)/;
+      function getUnary() {
+        var operator = next(reUnaryOp);
+        return operator ? {
+          operator: operator,
+          member: getMember()
+        } : getMember();
+      }
+      function getBinary() {
+        var left = getUnary();
+        var operator = next(reBinaryOp);
+        return operator ? {
+          binary: {
+            left: left,
+            operator: operator,
+            right: getBinary()
+          }
+        } : left;
+      }
+      function getLogical() {
+        var left = getBinary();
+        var operator = next(reLogicalOp);
+        return operator ? {
+          logical: {
+            left: left,
+            operator: operator,
+            right: getLogical()
+          }
+        } : left;
+      }
+      function getConditional() {
+        var logical = getLogical();
+        if (next(/^\s*\?\s*/)) {
+          var ifTrue = getConditional();
+          check(/^\s*:\s*/);
+          var ifFalse = getConditional();
+          return {
+            conditional: {
+              logical: logical,
+              ifTrue: ifTrue,
+              ifFalse: ifFalse
+            }
+          }
+        } else
+          return logical;
+      }
+
+      // an expression is always a conditional expression
+      return getConditional();
     }
 
     // parsing loop
@@ -290,7 +448,7 @@ var l10n = (function(window, document, undefined) {
 
       // value and attributes
       if (!params.length) { // entity (= general case)
-        var value = readValue();           // (optional) string | array | hash
+        var value = readValue();           // (optional) string | array | list
         var attributes = readAttributes(); // (optional) key-value pairs
         if (!attributes && !index) {       // plain string (= general case)
           gL10nData[id] = value;
@@ -303,16 +461,6 @@ var l10n = (function(window, document, undefined) {
           if (attributes)
             gL10nData[id].attributes = attributes;
         }
-        /* } else {
-          if (value)
-            gL10nData[id] = new String(value);
-          else
-            gL10nData[id] = {};
-          if (index)
-            gL10nData[id].index = index;
-          if (attributes)
-            gL10nData[id].attributes = attributes;
-        } */
       } else { // macro
         gL10nData[id] = {};
         gL10nData[id].params = params;
@@ -320,7 +468,7 @@ var l10n = (function(window, document, undefined) {
       }
 
       // end of entity
-      nextMatch(/>/);
+      nextMatch(/^\s*>/);
     }
   }
 
