@@ -73,86 +73,63 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseL20n(text) {
-    /** http://zbraniecki.github.com/l20n/docs/grammar.html
-      * there seems to be a few inconsistencies with this spec:
-      * - the string delimiter is a double quote, not a single one
-      * - the value is optional
-      */
-
-    // utilities
+    function next(re) {
+      // the RegExp (re) should always start with /^\s*
+      var match = re.exec(text);
+      if (!match || !match.length)
+        return null;
+      text = text.substr(match.index + match[0].length);
+      return match[0].replace(/^\s*/, '');
+    }
     function assert(test) {
       if (!test)
         throw 'l10n parsing error: ' + text.substring(0, 128);
     }
-    function nextEntity() {
-      while (true) {
-        var match = /\/\*|</.exec(text);
-        if (!match || !match.length)
-          return false;
-        switch (match[0]) {
-          case '/*': // comment
-            var end = text.indexOf('*/', match.index);
-            if (end < 0)
-              return false;
-            text = text.substr(end + 2);
-            break;
-          case '<': // entity or macro
-            text = text.substr(match.index + 1);
-            return true;
-            break;
-        }
-      }
-      return true;
-    }
-    function nextMatch(re, doNotRaiseException) {
-      var match = re.exec(text);
-      if (!match || !match.length) {
-        assert(doNotRaiseException);
-        return null;
-      }
-      var rv = {
-        value: text.substring(0, match.index),
-        token: match[0],
-        index: match.index
-      };
-      text = text.substr(match.index + match[0].length);
+    function check(re) {
+      var rv = next(re);
+      assert(rv);
       return rv;
     }
 
     // entity parser
-    function readIdentifier() {
-      var id = nextMatch(/^\s*[a-zA-Z]\w*/, true);
-      return id ? id.token.replace(/^\s*/, '') : null;
+    function nextEntity() {
+      while (next(/^\s*\/\*/))
+        check(/\*\//);      // commments are ignored
+      return next(/^\s*</); // found entity or macro
     }
+    const reIdentifier = /^\s*[a-zA-Z]\w*/;
+    const reColonSep = /^\s*:\s*/;
+    const reCommaSep = /^\s*,\s*/;
+    const reStringDelim = /^\s*('''|"""|['"])/; // string sep: ', ", ''', """
+    const reValueBegin = /^\s*['"\[\{]/;
+    const reArrayBegin = /^\s*\[/;
+    const reArrayEnd = /^\s*\]/;
+    const reListBegin = /^\s*\{/;
+    const reListEnd = /^\s*\}/;
+
+    // entity attributes (key:value pairs)
     function readAttributes() {
       var attributes = {};
       var empty = true;
-      var id = readIdentifier();
+      var id = next(reIdentifier);
       while (id) {
-        nextMatch(/^\s*:\s*/);
+        check(reColonSep);
         attributes[id] = readValue();
-        id = readIdentifier();
+        id = next(reIdentifier);
         empty = false;
       }
       return empty ? null : attributes;
     }
-    function readMacro() {
-      nextMatch(/\{\s*/);
-      var expr = readExpression();
-      nextMatch(/^\s*\}/);
-      return expr;
-    }
 
-    // value parser (string|array|list)
+    // entity values (string|array|list)
     function readValue() {
       function getString() {
-        // string separator: ', ", ''', """
         // escape sequences: \, {{...}}
         var str = '';
         var len = text.length;
         var escapeMode = false;
         var delimFound = false;
-        var delim = nextMatch(/'''|"""|['"]/).token;
+        var delim = check(reStringDelim);
         var checkDelim = (delim.length == 1) ?
           function(pos) {
             return (text[pos] == delim);
@@ -179,13 +156,12 @@ var l10n = (function(window, document, undefined) {
         return str;
       }
       function getSplitString() {
-        // string separator: ', ", ''', """
         // escape sequences: \, {{...}}
         var str = '';
         var len = text.length;
         var escapeMode = false;
         var delimFound = false;
-        var delim = nextMatch(/'''|"""|['"]/).token;
+        var delim = check(reStringDelim);
         var checkDelim = (delim.length == 1) ?
           function(pos) {
             return (text[pos] == delim);
@@ -223,43 +199,40 @@ var l10n = (function(window, document, undefined) {
         return last ? output : str;
       }
       function getArray() {
-        nextMatch(/^\s*\[/);
+        check(reArrayBegin);
+        if (next(reArrayEnd))
+          return [];
         var table = [];
-        var value = readValue();
-        while (value) {
-          table.push(value);
-          if (!nextMatch(/^\s*,\s*/, true))
-            break;
-          value = readValue();
-        }
-        nextMatch(/^\s*\]/);
+        do {
+          table.push(readValue());
+        } while (next(reCommaSep));
+        check(reArrayEnd);
         return table;
       }
       function getList() {
-        nextMatch(/^\s*\{/);
+        check(reListBegin);
+        if (next(reListEnd))
+          return {};
         var list = {};
-        var id = readIdentifier();
-        while (id) {
-          nextMatch(/^\s*:\s*/);
+        do {
+          var id = next(reIdentifier);
+          check(reColonSep);
           list[id] = readValue();
-          if (!nextMatch(/^\s*,\s*/, true))
-            break;
-          id = readIdentifier();
-        }
-        nextMatch(/^\s*\}/);
+        } while (next(reCommaSep));
+        check(reListEnd);
         return list;
       }
 
       // return a string|array|list according to the first token
-      var match = (/^\s*['"\[\{]/).exec(text);
+      var match = reValueBegin.exec(text);
       if (!match || !match.length)
         return null;
       var token = match[0];
       switch (token[token.length - 1]) {
         case '"':
         case "'":
-          //return getString();
-          return getSplitString();
+          return getString();
+          //return getSplitString();
           break;
         case '[':
           return getArray();
@@ -271,119 +244,102 @@ var l10n = (function(window, document, undefined) {
       return null;
     }
 
-    // expression parser
+    // entity expressions
     function readExpression() {
-      function next(re) {
-        var match = re.exec(text);
-        if (!match || !match.length)
-          return null;
-        text = text.substr(match.index + match[0].length);
-        return match[0].replace(/^\s*/, '');
-      }
-      function check(re) {
-        var rv = next(re);
-        assert(rv);
-        return rv;
-      }
-
       // member parsing
       function getPrimary() { // (expression) | number | value | ID
-        if (next(/^\s*\(\s*/)) {          // (expression)
+        if (next(/^\s*\(/)) {           // (expression)
           var expr = readExpression();
           check(/^\s*\)/);
           return { expression: expr };
         }
-        if (/^\s*[0-9]\w*/.test(text))    // number
-          return next(/^\s*[0-9]\w*/);
-        if (/^\s*['"\[\{]/.test(text))    // value
+
+        var num = next(/^\s*[0-9]\w*/); // number
+        if (num)
+          return parseInt(num, 10);
+
+        if (reValueBegin.test(text))    // value
           return readValue();
-        if (/^\s*[a-zA-Z]\w*/.test(text)) // ID
-          return readIdentifier();
+
+        var id = next(reIdentifier);    // ID
+        if (id)
+          return id;
+
         return null;
       }
       function getMember() {  // primary | attr | prop | call
-        // simple case: parenthesis | number | value | ID
         var primary = getPrimary();
-        if (primary)
-          return primary;
+        //assert(primary);
+        if (!primary)
+          return null;
 
-        // tricky case: call | property | attr
-        var member = getMember();
-        var isID = (typeof member === 'string') && /^[a-zA-z]+$/.test(member);
+        var isID = (typeof primary === 'string') && reIdentifier.test(primary);
         var expr, id;
 
-        // attr: member[.expression] | ID..ID
+        // attr: primary[.expression] | ID..ID
         var attrSep = next(/^\.\.|^\s*\[\./);
         if (attrSep) {
           if (attrSep == '[.') {
             expr = readExpression();
             check(/^\s*\]/);
             return {
-              attr: {
-                member: member,
-                expression: expr
-              }
-            }
+              attr: { primary: primary, expression: expr }
+            };
           }
           if (isID && (attrSep == '..')) {
-            id = check(/^[a-zA-Z]\w*/);
             return {
-              attr: {
-                member: member,
-                id: id
-              }
-            }
+              attr: { primary: primary, id: check(reIdentifier) }
+            };
           }
           assert();
         }
 
-        // prop: member[expression] | ID.ID
+        // prop: primary[expression] | ID.ID
         var propSep = next(/^\.|^\s*\[/);
         if (propSep) {
           if (propSep == '[') {
             expr = readExpression();
             check(/^\s*\]/);
             return {
-              prop: {
-                member: member,
-                expression: expr
-              }
-            }
+              prop: { primary: primary, expression: expr }
+            };
           }
           if (isID && (propSep == '.')) {
-            id = check(/^[a-zA-Z]\w*/);
             return {
-              prop: {
-                member: member,
-                id: id
-              }
-            }
+              prop: { primary: primary, id: check(reIdentifier) }
+            };
           }
           assert();
         }
 
-        // call: member(expression, ...)
+        // call: primary(expression, ...)
         var callSep = next(/^\s*\(/);
         if (callSep) {
-          // TODO
-          return check(/\)/);
+          var params = [];
+          do {
+            params.push(readExpression());
+          } while (next(reCommaSep));
+          check(/\)/);
+          return {
+            call: { primary: primary, params: params }
+          };
         }
 
-        // syntax error
-        assert();
-        return null;
+        // default
+        return primary;
       }
 
       // condition parsing
-      const reUnaryOp   = /^\s*[+\-!]/;
-      const reBinaryOp  = /^\s*(==|!=|<=|>=|\+|\-|\*|\/|%)/;
+      const reUnaryOp = /^\s*[+\-!]/;
+      const reBinaryOp = /^\s*(==|!=|<=|>=|\+|\-|\*|\/|%)/;
       const reLogicalOp = /^\s*(\|\||\&\&)/;
       function getUnary() {
         var operator = next(reUnaryOp);
+        var member = getMember();
         return operator ? {
           operator: operator,
-          member: getMember()
-        } : getMember();
+          member: member
+        } : member;
       }
       function getBinary() {
         var left = getUnary();
@@ -411,7 +367,7 @@ var l10n = (function(window, document, undefined) {
         var logical = getLogical();
         if (next(/^\s*\?\s*/)) {
           var ifTrue = getConditional();
-          check(/^\s*:\s*/);
+          check(reColonSep);
           var ifFalse = getConditional();
           return {
             conditional: {
@@ -419,7 +375,7 @@ var l10n = (function(window, document, undefined) {
               ifTrue: ifTrue,
               ifFalse: ifFalse
             }
-          }
+          };
         } else
           return logical;
       }
@@ -430,19 +386,23 @@ var l10n = (function(window, document, undefined) {
 
     // parsing loop
     while (nextEntity()) {
-      var id = readIdentifier();
+      var id = next(reIdentifier);
 
       // possible index or macro params
       var index = '';
       var params = [];
       switch (text[0]) {
         case '[': // index
-          nextMatch(/\[\s*/);
-          index = nextMatch(/\]/).value;
+          check(/^\[/);
+          index = readExpression();
+          check(/^\s*]/);
           break;
         case '(': // macro params
-          nextMatch(/\(\s*/);
-          params = nextMatch(/\)/).value.split(/\s*,\s*/);
+          check(/^\(/);
+          do {
+            params.push(readExpression());
+          } while (next(reCommaSep));
+          check(/^\s*\)/);
           break;
       }
 
@@ -462,13 +422,15 @@ var l10n = (function(window, document, undefined) {
             gL10nData[id].attributes = attributes;
         }
       } else { // macro
+        check(/^\s*\{/);
         gL10nData[id] = {};
         gL10nData[id].params = params;
-        gL10nData[id].macro = readMacro();
+        gL10nData[id].macro = readExpression();
+        check(/^\s*\}/);
       }
 
       // end of entity
-      nextMatch(/^\s*>/);
+      check(/^\s*>/);
     }
   }
 
