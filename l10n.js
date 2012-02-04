@@ -73,17 +73,23 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseL20n(text) {
+    var parsedText = '';
     function next(re) {
-      // the RegExp (re) should always start with /^\s*
       var match = re.exec(text);
       if (!match || !match.length)
         return null;
-      text = text.substr(match.index + match[0].length);
+      // the RegExp (re) should always start with /^\s* -- except for comments
+      assert(match.index == 0 || match[0] == '*\/');
+      var index = match.index + match[0].length;
+      parsedText += text.substring(0, index);
+      text = text.substr(index);
       return match[0].replace(/^\s*/, '');
     }
     function assert(test) {
       if (!test)
-        throw 'l10n parsing error: ' + text.substring(0, 128);
+        throw 'l10n parsing error: \n' +
+          parsedText.substr(parsedText.length - 128) +
+          ' ### ' + text.substring(0, 128);
     }
     function check(re) {
       var rv = next(re);
@@ -91,22 +97,20 @@ var l10n = (function(window, document, undefined) {
       return rv;
     }
 
+    // entity delimiters
+    const reIdentifier = /^\s*[a-zA-Z]\w*/;
+    const reNumber = /^\s*[0-9]\w*/;
+    const reColonSep = /^\s*:\s*/;
+    const reCommaSep = /^\s*,\s*/;
+    const reValueBegin = /^\s*['"\[\{]/;
+    const reStringDelim = /^\s*('''|"""|['"])/;
+
     // entity parser
     function nextEntity() {
       while (next(/^\s*\/\*/))
         check(/\*\//);      // commments are ignored
       return next(/^\s*</); // found entity or macro
     }
-    const reIdentifier = /^\s*[a-zA-Z]\w*/;
-    const reColonSep = /^\s*:\s*/;
-    const reCommaSep = /^\s*,\s*/;
-    const reStringDelim = /^\s*('''|"""|['"])/; // string sep: ', ", ''', """
-    const reValueBegin = /^\s*['"\[\{]/;
-    const reArrayBegin = /^\s*\[/;
-    const reArrayEnd = /^\s*\]/;
-    const reListBegin = /^\s*\{/;
-    const reListEnd = /^\s*\}/;
-
     // entity attributes (key:value pairs)
     function readAttributes() {
       var attributes = {};
@@ -150,6 +154,7 @@ var l10n = (function(window, document, undefined) {
           i++;
         }
         if (delimFound) {
+          parsedText += text.substring(0, i);
           str = evalString(text.substring(0, i - delim.length));
           text = text.substr(i);
         }
@@ -191,6 +196,7 @@ var l10n = (function(window, document, undefined) {
           i++;
         }
         if (delimFound) {
+          parsedText += text.substring(0, i);
           str = evalString(text.substring(last, i - delim.length));
           if (str.length)
             output.push(str);
@@ -199,7 +205,8 @@ var l10n = (function(window, document, undefined) {
         return last ? output : str;
       }
       function getArray() {
-        check(reArrayBegin);
+        var reArrayEnd = /^\s*\]/;
+        check(/^\s*\[/);
         if (next(reArrayEnd))
           return [];
         var table = [];
@@ -210,7 +217,8 @@ var l10n = (function(window, document, undefined) {
         return table;
       }
       function getList() {
-        check(reListBegin);
+        var reListEnd = /^\s*\}/;
+        check(/^\s*\{/);
         if (next(reListEnd))
           return {};
         var list = {};
@@ -254,7 +262,7 @@ var l10n = (function(window, document, undefined) {
           return { expression: expr };
         }
 
-        var num = next(/^\s*[0-9]\w*/); // number
+        var num = next(reNumber);       // number
         if (num)
           return parseInt(num, 10);
 
@@ -422,11 +430,40 @@ var l10n = (function(window, document, undefined) {
             gL10nData[id].attributes = attributes;
         }
       } else { // macro
+        /*
         check(/^\s*\{/);
         gL10nData[id] = {};
         gL10nData[id].params = params;
         gL10nData[id].macro = readExpression();
         check(/^\s*\}/);
+        */
+        check(/^\s*\{/);
+        var index = parsedText.length;
+        var expr = readExpression();
+        var source = parsedText.substr(index);
+        var body = 'return (' + source + ')';
+        check(/^\s*\}/);
+
+        // XXX hack
+        if (expr) {
+          var macro;
+          switch (params.length) {
+            case 1:
+              macro = new Function(params[0], body);
+              break;
+            case 2:
+              macro = new Function(params[0], params[1], body);
+              break;
+            case 3:
+              macro = new Function(params[0], params[1], params[2], body);
+              break;
+          }
+          gL10nData[id] = {};
+          gL10nData[id].macro = macro;
+          gL10nData[id].source = source;
+          gL10nData[id].params = params;
+          gL10nData[id].expression = expr;
+        }
       }
 
       // end of entity
