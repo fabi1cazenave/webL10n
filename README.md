@@ -53,20 +53,18 @@ Note: ```_()``` is a shortcut for ```l10n.get()```
 The ```l10nLocaleLoaded``` event is fired when all files corresponding to the
 current locale have been loaded and parsed.
 
-Related Projects
-----------------
+References
+----------
 
 The text/l10n format comes from the Mozilla l20n project:
 
-* https://wiki.mozilla.org/L20n
-* http://zbraniecki.github.com/l20n/
-* http://zbraniecki.github.com/l20n/docs/grammar.html
-* https://github.com/zbraniecki/l20n
+* on the Mozilla wiki: [l20n page](https://wiki.mozilla.org/L20n), [toolbox](https://wiki.mozilla.org/L20n/Toolbox);
+* on Gandalf’s github: [l20n page](http://zbraniecki.github.com/l20n/),
+  [grammar](http://zbraniecki.github.com/l20n/docs/grammar.html),
+  [project](https://github.com/zbraniecki/l20n).
 
-Alternatively, there are JavaScript libraries to support gettext:
-
-* http://jsgettext.berlios.de/
-* http://slexaxton.github.com/Jed/
-
-However, the Mozilla l20n project aims to supercede gettext.
+FTR there are JavaScript libraries to support gettext (e.g.
+[jsgettext](http://jsgettext.berlios.de/) and
+[jed](http://slexaxton.github.com/Jed/)), but the Mozilla l20n project aims
+to supercede gettext.
 
