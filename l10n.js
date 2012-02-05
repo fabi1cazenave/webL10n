@@ -407,40 +407,11 @@ var l10n = (function(window, document, undefined) {
             gL10nData[id].attributes = attributes;
         }
       } else { // macro
-        /*
         check(/^\s*\{/);
         gL10nData[id] = {};
         gL10nData[id].params = params;
         gL10nData[id].macro = readExpression();
         check(/^\s*\}/);
-        */
-        check(/^\s*\{/);
-        var index = parsedText.length;
-        var expr = readExpression();
-        var source = parsedText.substr(index);
-        var body = 'return (' + source + ')';
-        check(/^\s*\}/);
-
-        // XXX hack
-        if (expr) {
-          var macro;
-          switch (params.length) {
-            case 1:
-              macro = new Function(params[0], body);
-              break;
-            case 2:
-              macro = new Function(params[0], params[1], body);
-              break;
-            case 3:
-              macro = new Function(params[0], params[1], params[2], body);
-              break;
-          }
-          gL10nData[id] = {};
-          gL10nData[id].macro = macro;
-          gL10nData[id].source = source;
-          gL10nData[id].params = params;
-          gL10nData[id].expression = expr;
-        }
       }
 
       // end of entity
