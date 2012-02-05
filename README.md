@@ -1,7 +1,7 @@
 This is an attempt to get a simple l10n library for modern browsers.
-At the moment we support properties files (like for Gecko and Java) and Mozilla
-l20n resources, and this could easily be extended to other file formats:
-the point is mainly to test the HTML syntax and the JS API.
+The parser supports properties files (like for Gecko and Java) and
+[Mozilla l20n resources](https://wiki.mozilla.org/L20n).
+The point is mainly to test the HTML syntax and the JS API.
 
 Demo: http://kazhack.org/webL10n/
 
@@ -58,8 +58,11 @@ References
 
 The text/l10n format comes from the Mozilla l20n project:
 
-* on the Mozilla wiki: [l20n page](https://wiki.mozilla.org/L20n), [toolbox](https://wiki.mozilla.org/L20n/Toolbox);
-* on Gandalf’s github: [l20n page](http://zbraniecki.github.com/l20n/),
+* on the Mozilla wiki:
+  [l20n page](https://wiki.mozilla.org/L20n),
+  [toolbox](https://wiki.mozilla.org/L20n/Toolbox);
+* on Gandalf’s github:
+  [l20n page](http://zbraniecki.github.com/l20n/),
   [grammar](http://zbraniecki.github.com/l20n/docs/grammar.html),
   [project](https://github.com/zbraniecki/l20n).
 
