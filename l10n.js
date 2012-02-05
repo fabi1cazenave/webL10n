@@ -261,80 +261,57 @@ var l10n = (function(window, document, undefined) {
           check(/^\s*\)/);
           return { expression: expr };
         }
-
         var num = next(reNumber);       // number
         if (num)
           return parseInt(num, 10);
-
         if (reValueBegin.test(text))    // value
           return readValue();
-
         var id = next(reIdentifier);    // ID
         if (id)
           return id;
-
+        return null;
+      }
+      function getAttr(primary) { // primary[.expression] | primary..ID
+        var attr;
+        if (next(/^\.\./))        // primary..ID
+          attr = check(reIdentifier);
+        else if (next(/^\[\./)) { // primary[.expression]
+          attr = readExpression();
+          check(/^\s*\]/);
+        }
+        return attr ? { primary: primary, attr: attr } : null;
+      }
+      function getProp(primary) { // primary[expression] | primary.ID
+        var prop;
+        if (next(/^\./))        // primary.ID
+          prop = check(reIdentifier);
+        else if (next(/^\[/)) { // primary[expression]
+          prop = readExpression();
+          check(/^\s*\]/);
+        }
+        return prop ? { primary: primary, prop: prop } : null;
+      }
+      function getCall(primary) { // primary(expression, ...)
+        var params = [];
+        if (next(/^\(/)) {
+          do {
+            params.push(readExpression());
+          } while (next(reCommaSep));
+          check(/^\)/);
+          return { primary: primary, params: params };
+        }
         return null;
       }
       function getMember() {  // primary | attr | prop | call
         var primary = getPrimary();
-        //assert(primary);
         if (!primary)
           return null;
-
-        var isID = (typeof primary === 'string') && reIdentifier.test(primary);
-        var expr, id;
-
-        // attr: primary[.expression] | ID..ID
-        var attrSep = next(/^\.\.|^\s*\[\./);
-        if (attrSep) {
-          if (attrSep == '[.') {
-            expr = readExpression();
-            check(/^\s*\]/);
-            return {
-              attr: { primary: primary, expression: expr }
-            };
-          }
-          if (isID && (attrSep == '..')) {
-            return {
-              attr: { primary: primary, id: check(reIdentifier) }
-            };
-          }
-          assert();
+        var member = getAttr(primary) || getProp(primary) || getCall(primary);
+        while (member) {
+          primary = member;
+          member = getAttr(primary) || getProp(primary) || getCall(primary);
         }
-
-        // prop: primary[expression] | ID.ID
-        var propSep = next(/^\.|^\s*\[/);
-        if (propSep) {
-          if (propSep == '[') {
-            expr = readExpression();
-            check(/^\s*\]/);
-            return {
-              prop: { primary: primary, expression: expr }
-            };
-          }
-          if (isID && (propSep == '.')) {
-            return {
-              prop: { primary: primary, id: check(reIdentifier) }
-            };
-          }
-          assert();
-        }
-
-        // call: primary(expression, ...)
-        var callSep = next(/^\s*\(/);
-        if (callSep) {
-          var params = [];
-          do {
-            params.push(readExpression());
-          } while (next(reCommaSep));
-          check(/\)/);
-          return {
-            call: { primary: primary, params: params }
-          };
-        }
-
-        // default
-        return primary;
+        return member || primary;
       }
 
       // condition parsing
