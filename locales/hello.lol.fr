@@ -1,0 +1,8 @@
+/* French translation
+ * vim: ft=java
+ */
+<hello       "Bonjour !"
+  accesskey: "b"
+  title:     "cliquez-moi !">
+<sayHello    "Bonjour Mozilla !\nBonjour, le monde !">
+

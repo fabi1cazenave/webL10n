@@ -1,0 +1,8 @@
+/* German translation
+ * vim: ft=java
+ */
+<hello       "Hallo!"
+  accesskey: "h"
+  title:     "hier clicken!">
+<sayHello    "Hallo Mozilla!\nHallo, Welt!">
+
