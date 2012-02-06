@@ -1,0 +1,32 @@
+# vim: ft=yaml:ts=4:sw=4
+# handling element attributes like in this LOL example:
+#   <buttonClick "Click me"
+#       info: "{{buttonClick.title}}"
+#       title: "use Ctrl+{{buttonClick.accesskey}}"
+#       accesskey: "c">
+
+# recommended syntax:
+buttonClick: Click me
+buttonClick.info: {{buttonClick.title}}
+buttonClick.title: use Ctrl+{{buttonClick.accesskey}}
+buttonClick.accesskey: c
+
+# variant #1: LOL-like, not YAML-compliant
+#  - the "." token identifies element attributes
+#  - works but would be amgibuous with lists (as in LOL files)
+#  - seems tricky to use with indexes
+buttonClick: Click me
+    .info: {{buttonClick.title}}
+    .title: use Ctrl+{{buttonClick.accesskey}}
+    .accesskey: c
+
+# variant #2: YAML-compliant
+#  - the "~" token identifies element content
+#  - plays more nicely with indexes
+#  - could be used along with the recommended syntax
+buttonClick:
+    ~: Click me
+    .info: {{buttonClick.title}}
+    .title: use Ctrl+{{buttonClick.accesskey}}
+    .accesskey: c
+
