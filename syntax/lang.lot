@@ -48,10 +48,10 @@ brandShortName: Firefox
         many: {{count}} téléchargements
 
 !lang[de]:
-    !import(./locales/de/strings.yaml)
-    !import(./locales/de/document.yaml)
+    !import(./locales/de/strings.lot)
+    !import(./locales/de/document.lot)
 
 !lang[pl]:
-    !import(./locales/pl/strings.yaml)
-    !import(./locales/pl/document.yaml)
+    !import(./locales/pl/strings.lot)
+    !import(./locales/pl/document.lot)
 
