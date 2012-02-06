@@ -1,0 +1,60 @@
+# vim: ts=4:sw=4
+# *.lmao: L10n Mega-Advanced Objects
+# *.rofl: Resource Of F***ing Localization
+# *.sexy: Super Easy and eXtensible Yaml-based l10n format \o/
+
+brandName: Mozilla Firefox
+brandShortName: Firefox
+
+!lang[en]:
+    locale: English
+
+    # strings
+    newFile: New File
+    close: Close
+
+    # parameters
+    luckyNum: Your lucky number is: {{num}}
+    signedIn: You’re signed in as {{login}}
+
+    # attributes
+    buttonClick: Click me
+    buttonClick.title: Ctrl+{{buttonClick.accesskey}}
+    buttonClick.accesskey: c
+
+    # macros & indexes
+    plural(n): { n == 1 ? 'one' : 'many' }
+    download[plural(count)]:
+        one: one download
+        many: {{count}} downloads
+
+!lang[fr]:
+    locale: français
+
+    # strings
+    newFile: Nouveau Fichier
+    close: Fermer
+
+    # parameters
+    luckyNum: Votre numéro porte-bonheur est : {{num}}
+    signedIn: Vous êtes connecté en tant que : {{login}}
+
+    # attributes
+    buttonClick: Cliquez-moi
+    buttonClick.title: Ctrl+{{buttonClick.accesskey}}
+    buttonClick.accesskey: c
+
+    # macros & indexes
+    plural(n): { n <= 1 ? 'one' : 'many' }
+    download[plural(count)]:
+        one: {{count}} téléchargement
+        many: {{count}} téléchargements
+
+!lang[de]:
+    !import(./locales/de/strings.yaml)
+    !import(./locales/de/document.yaml)
+
+!lang[pl]:
+    !import(./locales/pl/strings.yaml)
+    !import(./locales/pl/document.yaml)
+

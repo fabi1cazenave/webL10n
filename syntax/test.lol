@@ -1,48 +1,48 @@
+/* vim: ts=4:sw=4 */
 
 /* strings */
-
 <newFile "New File">
 <close "Close">
 
 /* parameters */
-
 <luckyNum "Your lucky number is: {{num}}">
 <signedIn "You're signed in as {{login}}">
 
 /* properties */
-
 <buttonClick "Click me"
-  info: "{{buttonClick.title}}"
-  title: "In order to press the button use ctrl+{{buttonClick.accesskey}}"
-  accesskey: "c">
+    info: "{{buttonClick.title}}"
+    title: "use Ctrl+{{buttonClick.accesskey}}"
+    accesskey: "c">
 
 /* arrays */
-
 <drinks[num] [
-  "Coca Cola",
-  "Gatorade",
-  "Water"
+    "Coca Cola",
+    "Gatorade",
+    "Water"
 ]>
 
 /* lists */
-
 <cookie[form] {
-  one: "Cookie",
-  many: "Cookies"
+    one: "Cookie",
+    many: "Cookies"
 }>
 
 /* nested lists */
-
-<drinks[type, num] {
-  cup: {one: "Cup", many: "Cups"},
-  pot: {one: "Pot", many: "Pots"}
+<drinks[type,num] {
+    cup: {
+        one: "Cup",
+        many: "Cups"
+    },
+    pot: {
+        one: "Pot",
+        many: "Pots"
+    }
 }>
 
 /* macros */
-
 <plural(n) { n == 1 ? 'one' : 'many' }>
-<drinks[plural(num)] {
-  one: "Cup",
-  many: "Cups"
+<drinks[plural(count)] {
+    one: "one download",
+    many: "{{count}} downloads"
 }>
 
