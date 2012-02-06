@@ -1,7 +1,4 @@
-# vim: ts=4:sw=4
-# *.lmao: L10n Mega-Advanced Objects
-# *.rofl: Resource Of F***ing Localization
-# *.sexy: Super Easy and eXtensible Yaml-based l10n format \o/
+# vim: ft=yaml:ts=4:sw=4
 
 brandName: Mozilla Firefox
 brandShortName: Firefox

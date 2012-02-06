@@ -1,4 +1,4 @@
-# vim: ts=4:sw=4
+# vim: ft=yaml:ts=4:sw=4
 # handling element attributes like in this LOL example:
 #   <buttonClick "Click me"
 #       info: "{{buttonClick.title}}"
