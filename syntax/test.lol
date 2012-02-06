@@ -1,4 +1,4 @@
-/* vim: ts=4:sw=4 */
+/* vim: ft=javascript:ts=4:sw=4 */
 
 /* strings */
 <newFile "New File">
