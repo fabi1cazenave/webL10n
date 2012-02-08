@@ -1,4 +1,5 @@
-/* vim: ft=javascript:ts=4:sw=4 */
+/* vim: ft=javascript:ts=4:sw=4
+ */
 
 /* strings */
 <newFile "New File">
@@ -8,7 +9,12 @@
 <luckyNum "Your lucky number is: {{num}}">
 <signedIn "You're signed in as {{login}}">
 
-/* properties */
+/* attributes */
+<nameInput
+    placeholder: "Write your name"
+    title: "You can give us your nickname if you prefer">
+
+/* content + attributes */
 <buttonClick "Click me"
     info: "{{buttonClick.title}}"
     title: "use Ctrl+{{buttonClick.accesskey}}"
@@ -29,14 +35,8 @@
 
 /* nested lists */
 <drinks[type,num] {
-    cup: {
-        one: "Cup",
-        many: "Cups"
-    },
-    pot: {
-        one: "Pot",
-        many: "Pots"
-    }
+    cup: { one: "Cup", many: "Cups" },
+    pot: { one: "Pot", many: "Pots" }
 }>
 
 /* macros */
