@@ -1,7 +1,10 @@
 # vim: ft=yaml:ts=4:sw=4
 #   entity : (value)
 #   macro : { (expression) }
-# indentation-based, no string delimiters
+# Note:
+#   - no string delimiters required! Yay! \o/
+#   - very smart to use with multiline values and line-wrapped strings
+#   - no structure delimiters: the format is indentation-based
 
 # strings
 newFile: New File
