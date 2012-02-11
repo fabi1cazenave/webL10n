@@ -54,7 +54,7 @@ cookie[form]:
     many: Cookies
 
 # nested lists
-drinks[type,num]:
+moreDrinks[type,num]:
     cup:
         one: Cup
         many: Cups

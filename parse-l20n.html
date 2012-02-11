@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title> LOL parser </title>
+  <meta charset="utf-8" />
+  <script type="text/javascript" src="parse-l20n.js"></script>
+  <script type="text/javascript">
+    function parse() {
+      var text = document.querySelector('#l10n textarea').value;
+      try {
+        var data = JSON.stringify(parseL20n(text), undefined, 2);
+      } catch(e) { data = e; }
+      document.querySelector('#json textarea').innerHTML = data;
+    }
+  </script>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body onload="parse()">
+  <div id="data">
+    <div id="l10n">
+      <p> LOL data: </p>
+      <textarea oninput="parse();">
+/* strings */
+<newFile "New File">
+<close "Close">
+
+/* parameters */
+<luckyNum "Your lucky number is: {{num}}">
+<signedIn "You're signed in as {{login}}">
+
+/* attributes */
+<nameInput
+    placeholder: "Write your name"
+    title: "You can give us your nickname if you prefer">
+
+/* content + attributes */
+<buttonClick "Click me"
+    info: "{{buttonClick.title}}"
+    title: "use Ctrl+{{buttonClick.accesskey}}"
+    accesskey: "c">
+
+/* arrays */
+<drinks[num] [
+    "Coca Cola",
+    "Gatorade",
+    "Water"
+]>
+
+/* lists */
+<cookie[form] {
+    one: "Cookie",
+    many: "Cookies"
+}>
+
+/* nested lists */
+<moreDrinks[type,num] {
+    cup: { one: "Cup", many: "Cups" },
+    pot: { one: "Pot", many: "Pots" }
+}>
+
+/* macros */
+<plural(n) { n == 1 ? 'one' : 'many' }>
+<download[plural(count)] {
+    one: "one download",
+    many: "{{count}} downloads"
+}>
+    </textarea>
+    </div>
+    <div id="json">
+      <p> parsed object: </p>
+      <textarea readonly></textarea>
+    </div>
+  </div>
+</body>
+</html>

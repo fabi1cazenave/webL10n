@@ -21,7 +21,7 @@
     accesskey: "c">
 
 /* arrays */
-<drinks[num] [
+<moreDrinks[num] [
     "Coca Cola",
     "Gatorade",
     "Water"
@@ -41,7 +41,7 @@
 
 /* macros */
 <plural(n) { n == 1 ? 'one' : 'many' }>
-<drinks[plural(count)] {
+<download[plural(count)] {
     one: "one download",
     many: "{{count}} downloads"
 }>

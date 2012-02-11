@@ -13,24 +13,21 @@ HTML Markup
 L10n resource files are linked to the HTML document like this:
 
 ```html
-<link rel="resource" type="text/l10n"       href="locales/hello.intl" />
 <link rel="resource" type="text/properties" href="locales/data.properties" />
 ```
 
 * ```rel```: resource (any better idea?)
-* ```type```: ```text/l10n``` (Mozilla l20n files) or ```text/properties``` (Java-like properties)
+* ```type```: ```application/l10n``` (Java-like properties),
 * ```href```: resource file for the default locale
 
-l10n.js tries to load the resource file with a 'navigator.lang' suffix
-(e.g. locales/data.intl.fr for a French browser), then loads the default
-resource file if not found.
+l10n.js loads strings from the *.properties file.
+If this file contains several \[lang\] sections, the section corresponding to 
+'navigator.lang' will be selected (if available).
 
 Translatable elements carry data-l10n- attributes:
 
 * ```data-l10n-id```: string identifier
 * ```data-l10n-args```: (optional) arguments
-* ```data-l10n-path```: (optional) XPath selector
-* ```data-l10n-select```: (optional) CSS selector
 
 JavaScript API
 --------------
@@ -53,21 +50,19 @@ Note: ```_()``` is a shortcut for ```l10n.get()```
 The ```l10nLocaleLoaded``` event is fired when all files corresponding to the
 current locale have been loaded and parsed.
 
-References
-----------
+Supported l10n formats
+----------------------
 
-The text/l10n format comes from the Mozilla l20n project:
+l10n.js currently supports the *.properties format (= key/value pairs),
+which is used in most Mozilla or Java projects.
 
-* on the Mozilla wiki:
-  [l20n page](https://wiki.mozilla.org/L20n),
-  [toolbox](https://wiki.mozilla.org/L20n/Toolbox);
-* on Gandalf’s github:
-  [l20n page](http://zbraniecki.github.com/l20n/),
-  [grammar](http://zbraniecki.github.com/l20n/docs/grammar.html),
-  [project](https://github.com/zbraniecki/l20n).
+For more advanced features (plural, context…), two other formats could be
+supported by l10n.js:
 
-FTR there are JavaScript libraries to support gettext (e.g.
-[jsgettext](http://jsgettext.berlios.de/) and
-[jed](http://slexaxton.github.com/Jed/)), but the Mozilla l20n project aims
-to supercede gettext.
+* [GNU gettext](http://www.gnu.org/software/gettext/)
+  — see [jsgettext](http://jsgettext.berlios.de/) and
+  [jed](http://slexaxton.github.com/Jed/))
+* [Mozilla l20n](https://wiki.mozilla.org/L20n) 
+  — see the [toolbox](https://wiki.mozilla.org/L20n/Toolbox)
+  and this [project](https://github.com/zbraniecki/l20n).
 
