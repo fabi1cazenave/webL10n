@@ -1,0 +1,34 @@
+/* vim: ft=javascript:ts=4:sw=4
+ *   entity : value
+ *   macro : { expression }
+ *
+ * Notes:
+ *   - this file is *NOT* JSON-compliant, it just uses a JSON-like syntax
+ *   - the whole data is not enclosed in a main { ... } block;
+ *   - the comma separator should be optional at EOL, required otherwise
+ *   - this formats supports all LOL features
+ */
+
+name: "Name",
+phone: "Phone",
+address: "Address",
+
+name_input: {
+    .placeholder: "Write your name",
+    .title: "You can give us your nickname if you prefer"
+},
+
+phone_input: {
+    .placeholder: "(501) 650 231 800"
+},
+
+address_input: {
+    .placeholder: "650 Castro St., Suite 300, MtV, CA"
+},
+
+test: {  ~: "hello, world!",
+    .style: "color: red;",
+    .value: "passed",
+    .title: "color should be green"
+}
+

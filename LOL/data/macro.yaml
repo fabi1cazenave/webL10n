@@ -1,0 +1,17 @@
+# vim: ft=yaml:ts=4:sw=4
+#   entity : (value)
+#   macro : { (expression) }
+#
+# Notes:
+#   - this file is *NOT* YAML-compliant, it just uses a YAML-like syntax
+#   - no string delimiters required! Yay! \o/
+#   - very smart to use with multiline values and line-wrapped strings
+#   - no structure delimiters: the format is indentation-based
+#   - this formats supports all LOL features
+
+# macros
+plural(n): { n == 1 ? 'one' : 'many' }
+download[plural(count)]:
+    one: one download
+    many: {{count}} downloads
+
