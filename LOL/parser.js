@@ -269,7 +269,7 @@ function parseL20n(text) {
 
     // condition parsing
     const reUnaryOp = /^\s*[+\-!]/;
-    const reBinaryOp = /^\s*(==|!=|<=|>=|\+|\-|\*|\/|%)/;
+    const reBinaryOp = /^\s*(==|!=|\<=?|\>=?|\+|\-|\*|\/|%)/;
     const reLogicalOp = /^\s*(\|\||\&\&)/;
     function getUnary() {
       var operator = next(reUnaryOp);

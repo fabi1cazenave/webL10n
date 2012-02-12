@@ -3,10 +3,10 @@
 #   macro : { (expression) }
 #
 # Notes:
+#   - this file is *NOT* YAML-compliant, it just uses a YAML-like syntax
 #   - no string delimiters required! Yay! \o/
 #   - very smart to use with multiline values and line-wrapped strings
 #   - no structure delimiters: the format is indentation-based
-#   - this file is *NOT* YAML-compliant, it juste uses a YAML-like syntax
 #   - this formats supports all LOL features
 
 # strings
