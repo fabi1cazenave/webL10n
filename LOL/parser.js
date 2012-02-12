@@ -36,26 +36,37 @@ function parseL20n(text) {
     return match[0].replace(/^\s*/, '');
   }
   function assert(test) {
-    if (!test)
-      throw 'l10n parsing error: \n' +
-        parsedText.substr(parsedText.length - 128) +
-        ' ### ' + text.substring(0, 128);
+    if (test)
+      return;
+    // context: one or two lines around the error (###)
+    var lines = parsedText.split('\n');
+    var lineNr = lines.length;
+    var context = lines[lineNr - 1];
+    if (lineNr > 1)
+      context = lines[lineNr - 2] + '\n' + context;
+    lines = text.split('\n');
+    context += ' ### ' + lines[0];
+    if (lines.length > 1)
+      context += '\n' + lines[1];
+    // throw parsing exception
+    throw 'line ' + (lineNr + 1) + ': l10n parsing error\n  ' +
+      context.replace(/\n/g, '\n  ');
   }
   function check(re) {
     var rv = next(re);
-    assert(rv);
+    assert(rv !== null);
     return rv;
   }
 
   // tokens
-  const reIdentifier = /^\s*[a-zA-Z]\w*/;
-  const reNumber = /^\s*[0-9]\w*/;
-  const reColonSep = /^\s*:\s*/;
-  const reCommaSep = /^\s*,\s*/;
-  const reValueBegin = /^\s*['"\[\{]/;
-  const reStringDelim = /^\s*('''|"""|['"])/;
+  var reIdentifier = /^\s*[a-zA-Z]\w*/;
+  var reNumber = /^\s*[0-9]\w*/;
+  var reColonSep = /^\s*:\s*/;
+  var reCommaSep = /^\s*,\s*/;
+  var reValueBegin = /^\s*['"\[\{]/;
+  var reStringDelim = /^\s*('''|"""|['"])/;
 
-  // JSON-like values: string|array|list
+  // JSON-like values: string | array | list
   function readValue() {
     function evalString(str) {
       return str.replace(/\\\\/g, '\\')
@@ -342,6 +353,7 @@ function parseL20n(text) {
   }
 
   // "LOL" entities :-/
+  // The name is by far the smartest thing with this format.
   function lolParser() {
     var lolData = {};
 
@@ -402,11 +414,77 @@ function parseL20n(text) {
     return lolData;
   }
 
-  // The format used for values|expressions|identifiers makes perfect sense,
-  // but a more generic entity format is needed to replace the "LOL" one.
-  // Alternative entity parsers (e.g. JSON-like) could go below.
-  function jsonParser() {}
+  // Alternative: JSON-like entities
+  // = generic and extensible entity format, consistent with l20n values,
+  //   familiar to all web developers, but rejected by the l20n team.
+  function intlParser() {
+    var intlData = {};
+    //reCommaSep = /^(\n|\s*,)\s*/; // commas are optional here
+    //reCommaSep = /^[,\s]*/; // commas are optional here
+    reCommaSep = /^(\s*,\s*|\s*$)/;
+    reIdentifier = /^\s*(~|\.?[a-zA-Z])\w*/; // dots allowed
 
-  return lolParser();
+    // entity delimiter
+    function nextEntity() {
+      while (next(/^\s*\/\*/))
+        check(/\*\//);                // commments are ignored
+      return reIdentifier.test(text); // found entity or macro
+    }
+
+    // parsing loop
+    while (nextEntity()) {
+      var id = readIdentifier();
+      var key = id.key;
+      if (key in intlData) // duplicate key: forget the former one
+        delete(intlData[key]);
+      check(reColonSep);
+
+      // TODO: check flat attributes (ID.attribute)
+      intlData[key] = {};
+      if (!id.params) { // entity (= general case)
+        var value = readValue();
+        var attributes = {};
+        var hasAttributes = false;
+        for (var k in value) {
+          if (/^\./.test(k)) { // attribute
+            attributes[k.substr(1)] = value[k];
+            delete(value[k]);
+            hasAttributes = true;
+          }
+        }
+        if (!hasAttributes && !id.index) { // plain string (= general case)
+          intlData[key] = value;
+        } else {
+          if (id.index)
+            intlData[key].index = id.index;
+          if (hasAttributes) {
+            intlData[key].value = value['~'];
+            intlData[key].attributes = attributes;
+          }
+          else
+            intlData[key].value = value;
+        }
+      } else { // macro
+        check(/^\s*\{/);
+        intlData[key].params = id.params;
+        intlData[key].macro = readExpression();
+        check(/^\s*\}/);
+      }
+
+      // end of entity
+      check(reCommaSep);
+    }
+    return intlData;
+  }
+
+  // Figure out which entity parser should be used:
+  // ignore leading comments and check the first significant token.
+  while (next(/^\s*\/\*/))
+    check(/\*\//);
+  if (/^\s*</.test(text)) // ugh, LOL. :-/
+    return lolParser();
+  if (reIdentifier.test(text))
+    return intlParser();
+  throw 'l10n parsing error: unknown format.';
 }
 

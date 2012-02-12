@@ -1,7 +1,6 @@
 This is an attempt to get a simple l10n library for modern browsers.
-The parser supports properties files (like for Gecko and Java) and
-[Mozilla l20n resources](https://wiki.mozilla.org/L20n).
-The point is mainly to test the HTML syntax and the JS API.
+The point is mainly to test the HTML syntax and the JS API before choosing a
+suitable data format (see last section).
 
 Demo: http://kazhack.org/webL10n/
 
@@ -13,7 +12,9 @@ HTML Markup
 L10n resource files are linked to the HTML document like this:
 
 ```html
-<link rel="resource" type="text/properties" href="locales/data.properties" />
+<link rel="resource" type="application/l10n" href="data.properties" />
+<link rel="resource" type="application/l10n" href="mobile.properties"
+      media="screen and (max-width: 640px)" />
 ```
 
 * ```rel```: resource (any better idea?)
@@ -32,8 +33,8 @@ Translatable elements carry data-l10n- attributes:
 JavaScript API
 --------------
 
-This API is a work in progress. We intend to reuse the l20n one, but if you want
-to try this library right now, here's how it goes.
+This API is a work in progress and is likely to change any time.  If you want to
+try the l10n.js library right now, here's how it goes.
 
 The whole library exposes an 'l10n' object:
 
@@ -53,16 +54,21 @@ current locale have been loaded and parsed.
 Supported l10n formats
 ----------------------
 
-l10n.js currently supports the *.properties format (= key/value pairs),
-which is used in most Mozilla or Java projects.
+l10n.js currently relies on the *.properties format, which is used in most
+Mozilla and Java projects. It is bullet-proof but limited (= key/value pairs).
+Our parser supports extensions to *.properties, in order to allow client-side
+language selection and “import” rules.
 
-For more advanced features (plural, context…), two other formats could be
-supported by l10n.js:
+For more advanced grammatical features (e.g. plural, context…), two other
+formats can be considered:
 
-* [GNU gettext](http://www.gnu.org/software/gettext/)
-  — see [jsgettext](http://jsgettext.berlios.de/) and
-  [jed](http://slexaxton.github.com/Jed/))
-* [Mozilla l20n](https://wiki.mozilla.org/L20n) 
-  — see the [toolbox](https://wiki.mozilla.org/L20n/Toolbox)
-  and this [project](https://github.com/zbraniecki/l20n).
+* [GNU gettext](http://www.gnu.org/software/gettext/) is the /de facto/ standard
+  — see [jsgettext](http://jsgettext.berlios.de/) (LGPL license) and
+  [jed](http://slexaxton.github.com/Jed/) (WTFPL license)
+* [Mozilla l20n](https://wiki.mozilla.org/L20n) aims to superceed gettext
+  — see this [project](https://github.com/zbraniecki/l20n) (BSD license).
+
+The Mozilla l20n format has been evaluated (see the 'LOL' directory in this
+repo) but doesn’t meet our needs. Jed seems interesting and ready-to-use,
+we still have to evaluate it for this project.
 

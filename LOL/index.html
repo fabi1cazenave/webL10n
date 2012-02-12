@@ -8,7 +8,7 @@
     function parse() {
       var text = document.querySelector('#l10n textarea').value;
       try {
-        var data = JSON.stringify(parseL20n(text), undefined, 2);
+        var data = JSON.stringify(parseL20n(text, 'LOL'), undefined, 2);
       } catch(e) { data = e; }
       document.querySelector('#json textarea').innerHTML = data;
     }
