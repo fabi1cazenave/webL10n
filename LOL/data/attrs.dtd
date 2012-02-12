@@ -1,0 +1,21 @@
+<!-- l20n file, vim: ft=dtd
+  -->
+<!ENTITY name "Name">
+<!ENTITY phone "Phone">
+<!ENTITY address "Address">
+
+<!ENTITY name_input
+  placeholder: "Write your name"
+  title: "You can give us your nickname if you prefer">
+
+<!ENTITY phone_input
+  placeholder: "(501) 650 231 800">
+
+<!ENTITY address_input
+  placeholder: "650 Castro St., Suite 300, MtV, CA">
+
+<!ENTITY test
+  style: "color: red;"
+  value: "passed"
+  title: "color should be green"
+>
