@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title> l20n test page </title>
+  <title> web-l10n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="text/l10n"       href="locales/hello.intl" />
-  <link rel="resource" type="text/properties" href="locales/data.properties" />
+  <link rel="resource" type="application/l10n" href="locales/hello.properties" />
+  <link rel="resource" type="application/l10n" href="locales/data.properties" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     window.addEventListener('l10nLocaleLoaded', function() {
@@ -55,11 +55,11 @@
   </div>
   <div id="data">
     <div id="l10n">
-      <p> l10n resource files: <small>(l20n + properties)</small></p>
+      <p> l10n resources: </p>
       <textarea readonly></textarea>
     </div>
     <div id="json">
-      <p> parsed data:  <small>(json)</small></p>
+      <p> parsed data: </p>
       <textarea readonly></textarea>
     </div>
   </div>
