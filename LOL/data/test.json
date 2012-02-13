@@ -1,13 +1,5 @@
 /* vim: ft=javascript:ts=4:sw=4
- *   entity : value
- *   macro : { expression }
- *
- * Notes:
- *   - this file is *NOT* JSON-compliant, it just uses a JSON-like syntax
- *   - this formats supports all LOL features
- */
-
-{
+ * Warning: this file uses a JSON-like syntax but is *NOT* JSON-compliant */
 
 /* strings */
 newFile: "New File",
@@ -19,16 +11,16 @@ signedIn: "You're signed in as {{login}}",
 
 /* attributes */
 nameInput: {
-    placeholder: "Write your name",
-    title:       "You can give us your nickname if you prefer"
+    .placeholder: "Write your name",
+    .title:       "You can give us your nickname if you prefer"
 },
 
 /* content + attributes */
 buttonClick: {
-    ~:         "Click me",
-    info:      "{{.title}}",
-    title:     "use Ctrl+{{.accesskey}}",
-    accesskey: "c"
+    ~:          "Click me",
+    .info:      "{{.title}}",
+    .title:     "use Ctrl+{{.accesskey}}",
+    .accesskey: "c"
 },
 
 /* arrays */
@@ -52,9 +44,8 @@ moreDrinks[type, num]: {
 
 /* macros */
 plural(n): { n == 1 ? 'one' : 'many' },
-drinks[plural(count)]: {
+download[plural(count)]: {
     one: "one download",
     many: "{{count}} downloads"
 }
 
-}

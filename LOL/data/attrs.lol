@@ -1,12 +1,4 @@
 /* l20n file, vim: ft=java:ts=4:sw=4
- *
- *
- *
- *
- *
- *
- *
- *
  */
 
 <name "Name">

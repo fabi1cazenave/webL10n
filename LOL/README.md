@@ -6,28 +6,14 @@ l10n.js used to support 'LOL' files from the
   description of the file format
 * [project repository](https://github.com/zbraniecki/l20n) (BSD license)
 
-Instead of the limited key-value approach, l20n supports indexes/parameters on
-keys and relies on logical expressions to handle grammatical rules. The
-resulting file format includes:
-
-* identifiers: ID + optional [index] or (params)
-* JSON-like values: string | array | list
-* C-style logical expressions
-* C-style comments
-* 'LOL' entities, instead of the conventional “ID:value” approach. :-/
-
-Identifiers, values, expressions and comments make perfect sense, but to meet
-our needs we need a nestable format for l20n entities (instead of the 'LOL' one)
-in order to group entities by language (client-side language selection), by
-media queries (desktop/mobile adaptation) — or more generally, to use more
-complex structures than HTML elements. We considered two alternatives:
-
-* JSON-like entities, keeping the rest of the l20n format “as is”;
-* YAML-like format: the whole l20n data would use an indentation-based structure.
+'LOL' files (Localizable Object List) are a flat list of localized entities.
+Our project requires a way to group entities by selectors (language selection,
+media queries), so we proposed a simplification of the LOL format to make it
+more extensible and get a Localizable Object *Tree* — see the “data” directory
+for more details.
 
 As the idea of nestable entities has been strongly rejected by the l20n team,
 we’re now looking for a more flexible alternative. Our l20n-related files have
-been removed from l10n.js, we leave our 'LOL' parser (which also supports a
-JSON-like variant) and our test files in this directory, in case someone else
-is interested.
+been removed from l10n.js, we leave our 'LOL' parser and our test files here,
+in case someone else is interested.
 
