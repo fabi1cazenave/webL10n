@@ -120,12 +120,12 @@ syntax, which feels wrong — and not needed.
 
 By design, LOL entities are not nestable. This gets in the developer’s way
 when dealing with more complex structures than just HTML elements. For our
-project, we intended to group entities by language and by media queries (to
+project, we intend to group entities by language and by media queries (to
 handle client-side language selection and mobile/desktop adaptation,
 respectively), this would be straight-forward with a JSON/YAML-like variant
 (see the lang.json and lang.yaml files in this directory), but impossible with
 the current LOL syntax.
 
-__There’s a point where the WTF-effect becomes a technical issue.__
+__There’s a point where a high WTF-factor becomes a technical issue.__
 We feel like we’re beyond that point.
 
