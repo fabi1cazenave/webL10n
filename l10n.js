@@ -524,7 +524,7 @@ var l10n = (function(window, document, undefined) {
         continue;
 
       // child content
-      child.innerHTML = data.value || data;
+      child.textContent = data.value || data;
 
       // child attributes
       if (data.attributes) {

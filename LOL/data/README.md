@@ -58,8 +58,8 @@ could become:
     }
 
 We suggest using ``~`` as a content identifier. This might be OK in general but
-for an HTML element, we may want to use something like ``#content`` for
-innerHTML and ``#text`` for contentText.
+for an HTML element, we may want to use something like ``#html`` for .innerHTML
+and ``#text`` for .textContent.
 
 Attributes are prefixed with a dot to match the current LOL syntax. This is
 mostly a namespace story.
