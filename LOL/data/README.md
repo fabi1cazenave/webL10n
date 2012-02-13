@@ -4,6 +4,8 @@ Here’s a proposal to make the 'LOL' format less weird and more extensible.
 'LOL' Format
 ------------
 
+[Example: test.lol](https://github.com/fabi1cazenave/webL10n/blob/master/LOL/data/test.lol)
+
 Entities:
 
     <identifier[index]? content? attributes?>
@@ -71,6 +73,8 @@ We considered two alternatives:
 JSON-like Alternative
 ---------------------
 
+[Example: test.json](https://github.com/fabi1cazenave/webL10n/blob/master/LOL/data/test.json)
+
 The simplest possible change would be to replace 'LOL' entities by ``ID: value``
 assignments, to become consistent with the JSON syntax applied to 'LOL' values.
 
@@ -93,12 +97,15 @@ Of course, this formats supports all LOL features.
 YAML-like Alternative
 ---------------------
 
+[Example: test.yaml](https://github.com/fabi1cazenave/webL10n/blob/master/LOL/data/test.yaml)
+
 The JSON-like format could also be written with a YAML syntax: structure blocks
 are replaced by indentation rules, and strings don’t have to be enclosed in
 quote marks. YAML makes a lot of sense to handle wrapped text of multiline
 text, with the ``>`` and ``|`` operators respectively.
 
 Compared to the JSON-like variant:
+
  * pro: no structure delimiters! no weird characters required!
  * pro: much simpler to handle text in general;
  * pro: format errors are easier to detect;

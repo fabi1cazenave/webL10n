@@ -9,7 +9,8 @@ l10n.js used to support 'LOL' files from the
 'LOL' files (Localizable Object List) are a flat list of localized entities.
 Our project requires a way to group entities by selectors (language selection,
 media queries), so we proposed a simplification of the LOL format to make it
-more extensible and get a Localizable Object *Tree* — see the “data” directory
+more extensible and get a Localizable Object *Tree* — see the 
+[“data” directory](https://github.com/fabi1cazenave/webL10n/tree/master/LOL/data#readme)
 for more details.
 
 As the idea of nestable entities has been strongly rejected by the l20n team,
