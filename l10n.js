@@ -1,23 +1,23 @@
-/* Copyright (c) 2011 Mozilla.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+/*  Copyright (c) 2011 Mozilla.
+  *
+  * Permission is hereby granted, free of charge, to any person obtaining a copy
+  * of this software and associated documentation files (the "Software"), to
+  * deal in the Software without restriction, including without limitation the
+  * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  * sell copies of the Software, and to permit persons to whom the Software is
+  * furnished to do so, subject to the following conditions:
+  *
+  * The above copyright notice and this permission notice shall be included in
+  * all copies or substantial portions of the Software.
+  *
+  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  * IN THE SOFTWARE.
+  */
 
 'use strict';
 var l10n = (function(window, document, undefined) {
@@ -40,15 +40,31 @@ var l10n = (function(window, document, undefined) {
                .replace(/\\'/g, "'");
   }
 
-  function parseProperties(text) {
+  function parseProperties(text, lang) {
+    const reBlank = /^\s*|\s*$/;
+    const reComment = /^\s*#|^\s*$/;
+    const reSection = /^\s*\[(.*)\]\s*$/;
+
     // parse the *.properties file into an associative array
+    var currentLang = '*';
+    var supportedLang = [];
+    var skipLang = false;
     var data = [];
-    var entries = text.replace(/^\s*|\s*$/, '').split(/[\r\n]+/);
+    var entries = text.replace(reBlank, '').split(/[\r\n]+/);
     for (var i = 0; i < entries.length; i++) {
-      if ((/^\s*#|^\s*$/).test(entries[i])) // comment or blank line
+      var line = entries[i];
+      if (reComment.test(line)) // comment or blank line
         continue;
-      var tmp = entries[i].split('=');
-      data[tmp[0]] = evalString(tmp[1]);
+      if (reSection.test(line)) { // section start
+        var match = reSection.exec(line);
+        var currentLang = match[1];
+        skipLang = (currentLang != lang) && (currentLang != '*');
+        continue;
+      } else if (skipLang)
+        continue;
+      var tmp = line.split('=');
+      if (tmp.length > 1)
+        data[tmp[0]] = evalString(tmp[1]);
     }
 
     // find the attribute descriptions, if any
@@ -72,20 +88,20 @@ var l10n = (function(window, document, undefined) {
     }
   }
 
-  function parse(text, type) {
+  function parse(text, lang) {
     gTextData += text;
     // we only support *.properties files at the moment
-    return parseProperties(text);
+    return parseProperties(text, lang);
   }
 
   // load and parse the specified resource file
-  function loadResource(href, type, onSuccess, onFailure) {
+  function loadResource(href, lang, onSuccess, onFailure) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', href, true);
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
         if (xhr.status == 200) {
-          parse(xhr.responseText, type);
+          parse(xhr.responseText, lang);
           if (onSuccess)
             onSuccess();
         } else {
@@ -128,9 +144,8 @@ var l10n = (function(window, document, undefined) {
       var type = link.type;
       this.load = function(lang, callback) {
         var applied = lang;
-        loadResource(href + '.' + lang, type, callback, function() {
-          // load default l10n resource file if not found
-          loadResource(href, type, callback, callback);
+        loadResource(href, lang, callback, function() {
+          console.warn(href + ' not found.');
           applied = '';
         });
         return applied; // return lang if found, an empty string if not found

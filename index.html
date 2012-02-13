@@ -3,14 +3,13 @@
 <head>
   <title> web-l10n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="application/l10n" href="locales/hello.properties" />
-  <link rel="resource" type="application/l10n" href="locales/data.properties" />
+  <link rel="resource" type="application/l10n" href="locales.properties" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     window.addEventListener('l10nLocaleLoaded', function() {
       document.querySelector('select').value = l10n.language;
-      document.querySelector('#l10n textarea').innerHTML = l10n.text;
-      document.querySelector('#json textarea').innerHTML =
+      document.querySelector('#l10n textarea').textContent = l10n.text;
+      document.querySelector('#json textarea').textContent =
           JSON.stringify(l10n.data, undefined, 2);
     }, false);
   </script>
