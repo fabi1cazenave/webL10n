@@ -14,7 +14,8 @@ L10n resource files are linked to the HTML document like this:
 
 ```html
 <link rel="resource" type="application/l10n" href="data.properties" />
-<link rel="resource" type="application/l10n" href="mobile.properties" media="screen and (max-width: 640px)" />
+<link rel="resource" type="application/l10n" href="mobile.properties"
+      media="screen and (max-width: 640px)" />
 ```
 
 l10n.js currently relies on the ``*.properties`` format, which is used in most
