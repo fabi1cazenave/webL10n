@@ -3,20 +3,20 @@
 
 /* arrays */
 drinks[num]: [
-    "Coca Cola",
-    "Gatorade",
+    "Coca Cola"
+    "Gatorade"
     "Water"
-],
+]
 
 /* lists */
 cookie[form]: {
-    one:  "Cookie",
+    one:  "Cookie"
     many: "Cookies"
-},
+}
 
 /* nested lists */
 moreDrinks[type, num]: {
-    cup: { one: "Cup", many: "Cups" },
+    cup: { one: "Cup", many: "Cups" }
     pot: { one: "Pot", many: "Pots" }
-},
+}
 

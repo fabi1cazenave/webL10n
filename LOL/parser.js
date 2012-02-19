@@ -67,6 +67,7 @@ function parseL20n(text) {
   var reStringDelim = /^\s*('''|"""|['"])/;
 
   // JSON-like values: string | array | list
+  var StrictCommaSep = true; 
   function readValue() {
     function evalString(str) {
       return str.replace(/\\\\/g, '\\')
@@ -163,9 +164,18 @@ function parseL20n(text) {
       if (next(reArrayEnd))
         return [];
       var table = [];
-      do {
-        table.push(readValue());
-      } while (next(reCommaSep));
+      if (StrictCommaSep) {
+        do {
+          table.push(readValue());
+        } while (next(reCommaSep));
+      } else {
+        var value = readValue();
+        while (value) {
+          table.push(value);
+          value = readValue();
+          next(reCommaSep);
+        }
+      }
       check(reArrayEnd);
       return table;
     }
@@ -175,11 +185,21 @@ function parseL20n(text) {
       if (next(reListEnd))
         return {};
       var list = {};
-      do {
+      if (StrictCommaSep) {
+        do {
+          var id = next(reIdentifier);
+          check(reColonSep);
+          list[id] = readValue();
+        } while (next(reCommaSep));
+      } else {
         var id = next(reIdentifier);
-        check(reColonSep);
-        list[id] = readValue();
-      } while (next(reCommaSep));
+        while (id) {
+          check(reColonSep);
+          list[id] = readValue();
+          next(reCommaSep);
+          id = next(reIdentifier);
+        }
+      }
       check(reListEnd);
       return list;
     }
@@ -268,9 +288,9 @@ function parseL20n(text) {
     }
 
     // condition parsing
-    const reUnaryOp = /^\s*[+\-!]/;
-    const reBinaryOp = /^\s*(==|!=|\<=?|\>=?|\+|\-|\*|\/|%)/;
-    const reLogicalOp = /^\s*(\|\||\&\&)/;
+    var reUnaryOp = /^\s*[+\-!]/;
+    var reBinaryOp = /^\s*(==|!=|\<=?|\>=?|\+|\-|\*|\/|%)/;
+    var reLogicalOp = /^\s*(\|\||\&\&)/;
     function getUnary() {
       var operator = next(reUnaryOp);
       var member = getMember();
@@ -418,11 +438,9 @@ function parseL20n(text) {
   // = generic and extensible entity format, consistent with l20n values,
   //   familiar to all web developers, but rejected by the l20n team.
   function intlParser() {
-    var intlData = {};
-    //reCommaSep = /^(\n|\s*,)\s*/; // commas are optional here
-    //reCommaSep = /^[,\s]*/; // commas are optional here
-    reCommaSep = /^(\s*,\s*|\s*$)/;
-    reIdentifier = /^\s*(~|\.?[a-zA-Z])\w*/; // dots allowed
+    StrictCommaSep = false; 
+    reIdentifier = /^\s*(~|\.?[a-zA-Z])\w*/;
+    //reCommaSep = /^(\s*,\s*| *[\r\n]+\s*|\s*$)/;
 
     // entity delimiter
     function nextEntity() {
@@ -432,6 +450,7 @@ function parseL20n(text) {
     }
 
     // parsing loop
+    var intlData = {};
     while (nextEntity()) {
       var id = readIdentifier();
       var key = id.key;
@@ -472,7 +491,8 @@ function parseL20n(text) {
       }
 
       // end of entity
-      check(reCommaSep);
+      //check(reCommaSep);
+      check(/^(\s*,\s*| *[\r\n]+\s*|\s*$)/); // comma | EOL | EOF
     }
     return intlData;
   }

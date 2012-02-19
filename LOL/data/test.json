@@ -2,50 +2,50 @@
  * Warning: this file uses a JSON-like syntax but is *NOT* JSON-compliant */
 
 /* strings */
-newFile: "New File",
-close:   "Close",
+newFile: "New File"
+close:   "Close"
 
 /* parameters */
-luckyNum: "Your lucky number is: {{num}}",
-signedIn: "You're signed in as {{login}}",
+luckyNum: "Your lucky number is: {{num}}"
+signedIn: "You're signed in as {{login}}"
 
 /* attributes */
 nameInput: {
-    .placeholder: "Write your name",
+    .placeholder: "Write your name"
     .title:       "You can give us your nickname if you prefer"
-},
+}
 
 /* content + attributes */
 buttonClick: {
-    ~:          "Click me",
-    .info:      "{{.title}}",
-    .title:     "use Ctrl+{{.accesskey}}",
+    ~:          "Click me"
+    .info:      "{{.title}}"
+    .title:     "use Ctrl+{{.accesskey}}"
     .accesskey: "c"
-},
+}
 
 /* arrays */
 drinks[num]: [
-    "Coca Cola",
-    "Gatorade",
+    "Coca Cola"
+    "Gatorade"
     "Water"
-],
+]
 
 /* lists */
 cookie[form]: {
-    one:  "Cookie",
+    one:  "Cookie"
     many: "Cookies"
-},
+}
 
 /* nested lists */
 moreDrinks[type, num]: {
-    cup: { one: "Cup", many: "Cups" },
+    cup: { one: "Cup", many: "Cups" }
     pot: { one: "Pot", many: "Pots" }
-},
+}
 
 /* macros */
-plural(n): { n == 1 ? 'one' : 'many' },
+plural(n): { n == 1 ? 'one' : 'many' }
 download[plural(count)]: {
-    one: "one download",
+    one: "one download"
     many: "{{count}} downloads"
 }
 

@@ -2,9 +2,9 @@
  * Warning: this file uses a JSON-like syntax but is *NOT* JSON-compliant */
 
 /* macros */
-plural(n): { n == 1 ? 'one' : 'many' },
+plural(n): { n == 1 ? 'one' : 'many' }
 download[plural(count)]: {
-    one: "one download",
+    one: "one download"
     many: "{{count}} downloads"
 }
 
