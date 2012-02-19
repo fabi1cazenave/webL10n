@@ -1,11 +1,6 @@
 l10n.js used to support 'LOL' files from the [Mozilla l20n](https://wiki.mozilla.org/L20n)
 project.
 
-* [l20n toolbox](https://wiki.mozilla.org/L20n/Toolbox) real-life examples
-* [l20n grammar](http://zbraniecki.github.com/l20n/docs/grammar.html) extensive
-  description of the file format
-* [project repository](https://github.com/zbraniecki/l20n) (BSD license)
-
 'LOL' files (Localizable Object List) are a flat list of localized entities.
 Our project requires a way to group entities by selectors (language selection,
 media queries), so we proposed a simplification of the LOL format to make it
