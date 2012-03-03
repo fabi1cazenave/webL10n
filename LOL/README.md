@@ -10,7 +10,7 @@ more extensible and get a Localizable Object *Tree* — see these two wiki pages
  * [l10n data: \*.intl](https://github.com/fabi1cazenave/webL10n/wiki/l10n-data%3a-*.intl)
 
 This parser is able to read both ``*.lol`` and ``*.intl`` formats. You can
-try it online: http://kazhack.org/webL10n/LOL/
+try it online: <http://kazhack.org/convert/lol/>
 
 As the idea of nestable entities has been strongly rejected by the l20n team,
 we’re now looking for a more flexible alternative and our l20n-related features
