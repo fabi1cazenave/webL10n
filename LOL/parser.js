@@ -20,7 +20,7 @@
   */
 
 'use strict';
-function parseL20n(text) {
+function parseL20n(text, astExpressions) {
   var parsedText = '';
 
   // utilities
@@ -63,11 +63,12 @@ function parseL20n(text) {
   var reNumber = /^\s*[0-9]\w*/;
   var reColonSep = /^\s*:\s*/;
   var reCommaSep = /^\s*,\s*/;
+  var reExprBegin = /^\s*[\(\[\{]/;
   var reValueBegin = /^\s*['"\[\{]/;
   var reStringDelim = /^\s*('''|"""|['"])/;
 
   // JSON-like values: string | array | list
-  var StrictCommaSep = true; 
+  var StrictCommaSep = true;
   function readValue() {
     function evalString(str) {
       return str.replace(/\\\\/g, '\\')
@@ -230,7 +231,7 @@ function parseL20n(text) {
     // member parsing
     function getPrimary() { // (expression) | number | value | ID
       if (next(/^\s*\(/)) {           // (expression)
-        var expr = readExpression();
+        var expr = getExpression();
         check(/^\s*\)/);
         return { expression: expr };
       }
@@ -249,7 +250,7 @@ function parseL20n(text) {
       if (next(/^\.\./))        // primary..ID
         attr = check(reIdentifier);
       else if (next(/^\[\./)) { // primary[.expression]
-        attr = readExpression();
+        attr = getExpression();
         check(/^\s*\]/);
       }
       return attr ? { primary: primary, attr: attr } : null;
@@ -259,7 +260,7 @@ function parseL20n(text) {
       if (next(/^\./))        // primary.ID
         prop = check(reIdentifier);
       else if (next(/^\[/)) { // primary[expression]
-        prop = readExpression();
+        prop = getExpression();
         check(/^\s*\]/);
       }
       return prop ? { primary: primary, prop: prop } : null;
@@ -268,7 +269,7 @@ function parseL20n(text) {
       var params = [];
       if (next(/^\(/)) {
         do {
-          params.push(readExpression());
+          params.push(getExpression());
         } while (next(reCommaSep));
         check(/^\)/);
         return { primary: primary, params: params };
@@ -337,43 +338,49 @@ function parseL20n(text) {
       } else
         return logical;
     }
+    function getExpression() {
+      // an expression is always a conditional expression
+      return getConditional();
+    }
 
-    // an expression is always a conditional expression
-    return getConditional();
+    // parse expression as AST or as text
+    var len = parsedText.length;
+    var delim = check(reExprBegin);
+    var rv = [];
+    do {
+      rv.push(getExpression());
+    } while (next(reCommaSep));
+    if (delim == '{') {    // macro body
+      check(/^\s*\}/);
+      assert(rv.length == 1);
+      rv = rv[0];
+    }
+    else if (delim == '(') // macro params
+      check(/^\s*\)/);
+    else if (delim == '[') // entity index
+      check(/^\s*\]/);
+    else
+      assert();
+    return astExpressions ? rv : parsedText.substr(len);
   }
 
   // identifiers: ID + optional [index] or (params)
   function readIdentifier() {
     var id = {};
     id.key = check(reIdentifier);
-
     // possible index or macro params
     switch (text[0]) {
-
       case '[': // index
-        check(/^\[/);
-        id.index = [];
-        do {
-          id.index.push(readExpression());
-        } while (next(reCommaSep));
-        check(/^\s*]/);
+        id.index = readExpression();
         break;
-
       case '(': // macro params
-        check(/^\(/);
-        id.params = [];
-        do {
-          id.params.push(readExpression());
-        } while (next(reCommaSep));
-        check(/^\s*\)/);
+        id.params = readExpression();
         break;
     }
-
     return id;
   }
 
-  // "LOL" entities :-/
-  // The name is by far the smartest thing with this format.
+  // "LOL" entity parser (sic) :-/
   function lolParser() {
     var lolData = {};
 
@@ -421,11 +428,9 @@ function parseL20n(text) {
             lolData[key].attributes = attributes;
         }
       } else { // macro
-        check(/^\s*\{/);
         lolData[key] = {};
         lolData[key].params = id.params;
         lolData[key].macro = readExpression();
-        check(/^\s*\}/);
       }
 
       // end of entity
@@ -434,11 +439,9 @@ function parseL20n(text) {
     return lolData;
   }
 
-  // Alternative: JSON-like entities
-  // = generic and extensible entity format, consistent with l20n values,
-  //   familiar to all web developers, but rejected by the l20n team.
+  // JSON-like entity parser
   function intlParser() {
-    StrictCommaSep = false; 
+    StrictCommaSep = false;
     reIdentifier = /^\s*(~|\.?[a-zA-Z])\w*/;
     //reCommaSep = /^(\s*,\s*| *[\r\n]+\s*|\s*$)/;
 
@@ -484,10 +487,8 @@ function parseL20n(text) {
             intlData[key].value = value;
         }
       } else { // macro
-        check(/^\s*\{/);
         intlData[key].params = id.params;
         intlData[key].macro = readExpression();
-        check(/^\s*\}/);
       }
 
       // end of entity
@@ -497,14 +498,24 @@ function parseL20n(text) {
     return intlData;
   }
 
+  // Expression parser
+  function exprParser() {
+    astExpressions = true;
+    var expr = readExpression();
+    check(/\s*$/);
+    return expr;
+  }
+
   // Figure out which entity parser should be used:
-  // ignore leading comments and check the first significant token.
-  while (next(/^\s*\/\*/))
+  while (next(/^\s*\/\*/)) // ignore leading comments
     check(/\*\//);
+  // chose the parser according to the first significant token
   if (/^\s*</.test(text)) // ugh, LOL. :-/
     return lolParser();
   if (reIdentifier.test(text))
     return intlParser();
+  if (reExprBegin.test(text))
+    return exprParser();
   throw 'l10n parsing error: unknown format.';
 }
 
