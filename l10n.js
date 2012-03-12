@@ -20,7 +20,7 @@
   */
 
 'use strict';
-var l10n = (function(window, document, undefined) {
+(function(window, document, undefined) {
   var gL10nData = {};
   var gTextData = '';
   var gLanguage = '';
@@ -41,27 +41,40 @@ var l10n = (function(window, document, undefined) {
   }
 
   function parseProperties(text, lang) {
-    const reBlank = /^\s*|\s*$/;
-    const reComment = /^\s*#|^\s*$/;
-    const reSection = /^\s*\[(.*)\]\s*$/;
+    var reBlank = /^\s*|\s*$/;
+    var reComment = /^\s*#|^\s*$/;
+    var reSection = /^\s*\[(.*)\]\s*$/;
+    var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
 
     // parse the *.properties file into an associative array
     var currentLang = '*';
     var supportedLang = [];
     var skipLang = false;
     var data = [];
+    var match = '';
     var entries = text.replace(reBlank, '').split(/[\r\n]+/);
     for (var i = 0; i < entries.length; i++) {
       var line = entries[i];
-      if (reComment.test(line)) // comment or blank line
+
+      // comment or blank line?
+      if (reComment.test(line))
         continue;
-      if (reSection.test(line)) { // section start
-        var match = reSection.exec(line);
-        var currentLang = match[1];
+
+      // section start?
+      if (reSection.test(line)) {
+        match = reSection.exec(line);
+        currentLang = match[1];
         skipLang = (currentLang != lang) && (currentLang != '*');
         continue;
       } else if (skipLang)
         continue;
+
+      // @import rule?
+      if (reImport.test(line)) {
+        match = reImport.exec(line);
+      }
+
+      // key-value pair
       var tmp = line.split('=');
       if (tmp.length > 1)
         data[tmp[0]] = evalString(tmp[1]);
@@ -160,8 +173,20 @@ var l10n = (function(window, document, undefined) {
     }
   }
 
-  // translate an element
-  function translate(element) {
+  // translate a string
+  function translateString(key, args) {
+    var str = gL10nData[key];
+    if (!str)
+      return key;
+    str = gL10nData[key].value || gL10nData[key];
+    if (args) for (var k in args) {
+      str = str.replace('{{' + k + '}}', args[k]);
+    }
+    return str;
+  }
+
+  // translate an HTML element
+  function translateElement(element) {
     element = element || document;
 
     // list of translatable attributes
@@ -204,26 +229,35 @@ var l10n = (function(window, document, undefined) {
 
   // load the default locale on startup
   window.addEventListener('DOMContentLoaded', function() {
-    loadLocale(navigator.language, translate);
+    if (navigator.mozSettings) {
+      var req = navigator.mozSettings.get('language.current');
+      req.onsuccess = function() {
+        loadLocale(req.result.value, translateElement);
+      };
+      req.onerror = function() {
+        loadLocale(navigator.language, translateElement);
+      };
+    }
+    else {
+      loadLocale(navigator.language, translateElement);
+    }
   }, false);
 
-  return {
-    get: function(key) {
-      return gL10nData[key] ? (gL10nData[key].value || gL10nData[key]) : key;
-    },
+  navigator.mozL10n = {
+    get: translateString,
     set: function(key, val) { gL10nData[key] = val; },
     get language() { return gLanguage; },
-    set language(lang) { loadLocale(lang, translate); },
+    set language(lang) { loadLocale(lang, translateElement); },
     get text() { return gTextData; },
     get data() { return gL10nData; },
     loadResource: loadResource,
     loadLocale: loadLocale,
-    translate: translate,
+    translate: translateElement,
     clear: clear
   };
 })(window, document);
 
-// gettext-like shortcut for l10n.get
+// gettext-like shortcut for navigator.mozL10n.get
 if (window._ === undefined)
-  var _ = l10n.get;
+  var _ = navigator.mozL10n.get;
 
