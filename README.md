@@ -80,6 +80,8 @@ welcome=bienvenue, {{user}} !
 Further thoughts
 ----------------
 
+### Media queries
+
 For mobile apps, here’s what I’d like to do:
 
 ```html
@@ -87,6 +89,8 @@ For mobile apps, here’s what I’d like to do:
 <link rel="resource" type="application/l10n" href="mobile.properties"
       media="screen and (max-width: 640px)" />
 ```
+
+### innerHTML
 
 For security concerns, we currently assume that all strings are applied as `textContent`. We’ll need a way to use localized strings as `innerHTML`, at least when the target element has non-text children. That can be achieved:
 
@@ -98,6 +102,8 @@ welcome#text=welcome, {{user}}!
 welcome#html=welcome, <strong>{{user}}</strong>!
 welcome#markdown=welcome, **{{user}}**!
 ```
+
+### Plural, gender…
 
 `l10n.js` currently relies on the ``*.properties`` format, which is used in most Mozilla and Java projects. It is bullet-proof but limited (= key/value pairs), and we’re working on a more advanced alternative to support finer grammatical rules.
 
