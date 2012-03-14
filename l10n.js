@@ -20,7 +20,7 @@
   */
 
 'use strict';
-(function(window, document, undefined) {
+document.mozL10n = (function(window, document, undefined) {
   var gL10nData = {};
   var gTextData = '';
   var gLanguage = '';
@@ -147,6 +147,7 @@
         // fire an 'l10nLocaleLoaded' DOM event
         var evtObject = document.createEvent('Event');
         evtObject.initEvent('l10nLocaleLoaded', false, false);
+        evtObject.language = lang;
         window.dispatchEvent(evtObject);
       }
     }
@@ -175,7 +176,7 @@
 
   // replace {{arguments}} with their values
   function substArguments(str, args) {
-    var reArgs = /\{\{\s*([a-zA-Z\.]+)\s*\}\}/g;
+    var reArgs = /\{\{\s*([a-zA-Z\.]+)\s*\}\}/;
     var match = reArgs.exec(str);
     while (match) {
       if (!match || match.length < 2)
@@ -226,7 +227,7 @@
     var args = {};
     if (element.dataset.l10nArgs) try {
       args = JSON.parse(element.dataset.l10nArgs);
-    } catch(e) {}
+    } catch (e) {}
 
     // element content
     var str = data.value || data;
@@ -283,23 +284,60 @@
     else {
       loadLocale(navigator.language, translateFragment);
     }
-  }, false);
+  });
 
-  navigator.mozL10n = {
+  // Public API
+  return {
+    // get|set a localized string
     get: translateString,
     set: function(key, val) { gL10nData[key] = val; },
+
+    // get|set the document language
     get language() { return gLanguage; },
     set language(lang) { loadLocale(lang, translateFragment); },
+
+    // debug
     get text() { return gTextData; },
     get data() { return gL10nData; },
-    loadResource: loadResource,
-    loadLocale: loadLocale,
-    translate: translateFragment,
-    clear: clear
+
+    // get the direction (ltr|rtl) of the current language
+    get direction() {
+      // http://www.w3.org/International/questions/qa-scripts
+      // Arabic, Hebrew, Farsi, Pashto, Urdu
+      var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+      return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
+    }
   };
 })(window, document);
 
+/*
+document.mozL10n = (function(window, document, undefined) {
+  [...]
+  return {
+    // get|set a localized string
+    get: translateString,
+    set: function(key, val) { gL10nData[key] = val; },
+
+    // get|set the document language
+    get language() { return gLanguage; },
+    set language(lang) { loadLocale(lang, translateFragment); },
+
+    // debug
+    get text() { return gTextData; },
+    get data() { return gL10nData; },
+
+    // get the direction (ltr|rtl) of the current language
+    get direction() {
+      // http://www.w3.org/International/questions/qa-scripts
+      // Arabic, Hebrew, Farsi, Pashto, Urdu
+      var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+      return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
+    }
+  };
+})(window, document);
+*/
+
 // gettext-like shortcut for navigator.mozL10n.get
 if (window._ === undefined)
-  var _ = navigator.mozL10n.get;
+  var _ = document.mozL10n.get;
 
