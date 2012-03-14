@@ -88,9 +88,7 @@ For mobile apps, here’s what I’d like to do:
       media="screen and (max-width: 640px)" />
 ```
 
-`l10n.js` currently relies on the ``*.properties`` format, which is used in most Mozilla and Java projects. It is bullet-proof but limited (= key/value pairs), and we’re working on a more advanced alternative.
-
-For security concerns, we currently assume that all strings are applied as `textContent`. We’ll need a way to use localized strings as `innerHTML`, at least when the target element has non-text children. That can be achieved…
+For security concerns, we currently assume that all strings are applied as `textContent`. We’ll need a way to use localized strings as `innerHTML`, at least when the target element has non-text children. That can be achieved:
 
 * by sanitizing the localized string before applying it as `innerHTML` (like in the PHP ``strip_tags`` method)
 * by providing a text-to-HTML method, e.g. markdown.
@@ -101,7 +99,9 @@ welcome#html=welcome, <strong>{{user}}</strong>!
 welcome#markdown=welcome, **{{user}}**!
 ```
 
-```
+`l10n.js` currently relies on the ``*.properties`` format, which is used in most Mozilla and Java projects. It is bullet-proof but limited (= key/value pairs), and we’re working on a more advanced alternative to support finer grammatical rules.
+
+
 License
 -------
 
