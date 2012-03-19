@@ -39,13 +39,13 @@ test.title=cliquez-moi !
 JavaScript API
 --------------
 
-``l10n.js`` exposes a rather simple ``document.mozL10n`` object.
+``l10n.js`` exposes a rather simple ``document.webL10n`` object.
 
 ```javascript
 // Set the 'lang' and 'dir' attributes to <html> when the page is translated
 window.addEventListener('localized', function showBody() {
   var html = document.querySelector('html');
-  var lang = document.mozL10n.language;
+  var lang = document.webL10n.language;
   html.setAttribute('lang', lang.name);
   html.setAttribute('dir', lang.direction);
 }, false);
@@ -57,14 +57,14 @@ window.addEventListener('localized', function showBody() {
 * `get` method: get a translated string.
 
 ```javascript
-var message = document.mozL10n.get('test');
+var message = document.webL10n.get('test');
 alert(message);
 ```
 
 You will probably use a gettext-like alias:
 
 ```javascript
-var _ = document.mozL10n.get;
+var _ = document.webL10n.get;
 alert(_('test'));
 ```
 
