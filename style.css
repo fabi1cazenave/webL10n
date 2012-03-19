@@ -13,7 +13,8 @@ html, body {
 
 #l10n, #json {
   margin: 0;
-  padding: 0.2em;
+  /*padding: 0.2em;*/
+  padding: 0;
   -webkit-box-orient: vertical;
   -moz-box-orient: vertical;
   box-orient: vertical;
