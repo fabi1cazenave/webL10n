@@ -110,6 +110,18 @@ welcome#html=welcome, <strong>{{user}}</strong>!
 welcome#mark=welcome, **{{user}}**!
 ```
 
+### Multi-line strings
+
+Multi-line and wrapped strings aren’t supported at the moment. The *.properties way to extend a string on several lines is to use a backslash at the end of line… but there could be sharper/easier ways to handle that.
+
+YAML handles multi-line / wrapped strings nicely with the pipe and backslash operators, maybe we could reuse that in webL10n?
+
+
+### Arrays and lists
+
+There are (rare) cases where we’d want the entity to be an array or a list, instead of a string. We could use a JSON- or YAML-like syntax for that.
+
+
 ### Plural, gender…
 
 The Mozilla l20n project introduces the concept of “expression”, which can be used to address most grammatical rules.
