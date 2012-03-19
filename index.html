@@ -6,9 +6,9 @@
   <link rel="resource" type="application/l10n" href="locales.properties" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
-    window.addEventListener('l10nLocaleLoaded', function() {
+    window.addEventListener('localized', function() {
       var l10n = document.mozL10n;
-      document.querySelector('select').value = l10n.language;
+      document.querySelector('select').value = l10n.language.name;
       document.querySelector('#l10n textarea').textContent = l10n.text;
       document.querySelector('#json textarea').textContent =
           JSON.stringify(l10n.data, undefined, 2);
