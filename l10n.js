@@ -289,9 +289,8 @@ document.webL10n = (function(window, document, undefined) {
 
   // Public API
   return {
-    // get|set a localized string
+    // get a localized string
     get: translateString,
-    set: function(key, val) { gL10nData[key] = val; },
 
     // debug
     get text() { return gTextData; },
