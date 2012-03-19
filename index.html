@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title> web-l10n test page </title>
+  <meta charset="utf-8" />
+  <link rel="resource" type="application/l10n" href="locales.properties" />
+  <script type="text/javascript" src="l10n.js"></script>
+  <script type="text/javascript">
+    window.addEventListener('localized', function() {
+      var l10n = document.webL10n;
+      document.querySelector('select').value = l10n.language.name;
+      document.querySelector('#l10n textarea').textContent = l10n.text;
+      document.querySelector('#json textarea').textContent =
+          JSON.stringify(l10n.data, undefined, 2);
+    }, false);
+  </script>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+  <style type="text/css">
+    #test div {
+      max-width: 600px;
+      margin: 1em auto;
+      padding: 0 1em;
+      border: 1px dashed black;
+    }
+    #data p {
+      height: 1em;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="test">
+    <div>
+      <p data-l10n-id="about">This section is translated dynamically</p>
+      <p style="text-align: center;">
+        <span data-l10n-id="Phone" title="phone">Phone</span>
+        <span data-l10n-id="Calculator">Calculator</span>
+        <span data-l10n-id="Music">Music</span>
+        <span data-l10n-id="Books">Books</span>
+        <span data-l10n-id="Calendar" title="calendar">Calendar</span>
+        <br />
+        <button data-l10n-id="hello" accesskey="h" title="click"
+            onclick="alert(_('sayHello'));">Hello!</button>
+      </p>
+      <p style="text-align: right;">
+        <span data-l10n-id="langSelection">language selection</span>
+        <select onchange="document.webL10n.language.name = this.value;">
+          <option disabled selected> </option>
+          <option>en</option>
+          <option>fr</option>
+          <option>de</option>
+        </select>
+      </p>
+    </div>
+  </div>
+  <div id="data">
+    <div id="l10n">
+      <p> l10n resources: </p>
+      <textarea readonly></textarea>
+    </div>
+    <div id="json">
+      <p> parsed data: </p>
+      <textarea readonly></textarea>
+    </div>
+  </div>
+</body>
+</html>
