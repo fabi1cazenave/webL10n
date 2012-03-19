@@ -1,4 +1,4 @@
-/*  Copyright (c) 2011 Mozilla.
+/*  Copyright (c) 2011-2012 Fabien Cazenave, Mozilla.
   *
   * Permission is hereby granted, free of charge, to any person obtaining a copy
   * of this software and associated documentation files (the "Software"), to
@@ -20,6 +20,7 @@
   */
 
 'use strict';
+
 document.mozL10n = (function(window, document, undefined) {
   var gL10nData = {};
   var gTextData = '';
@@ -144,9 +145,9 @@ document.mozL10n = (function(window, document, undefined) {
         // execute the [optional] callback
         if (callback)
           callback();
-        // fire an 'l10nLocaleLoaded' DOM event
+        // fire a 'localized' DOM event
         var evtObject = document.createEvent('Event');
-        evtObject.initEvent('l10nLocaleLoaded', false, false);
+        evtObject.initEvent('localized', false, false);
         evtObject.language = lang;
         window.dispatchEvent(evtObject);
       }
@@ -292,21 +293,24 @@ document.mozL10n = (function(window, document, undefined) {
     get: translateString,
     set: function(key, val) { gL10nData[key] = val; },
 
-    // get|set the document language
-    get language() { return gLanguage; },
-    set language(lang) { loadLocale(lang, translateFragment); },
-
     // debug
     get text() { return gTextData; },
     get data() { return gL10nData; },
 
-    // get the direction (ltr|rtl) of the current language
-    get direction() {
-      // http://www.w3.org/International/questions/qa-scripts
-      // Arabic, Hebrew, Farsi, Pashto, Urdu
-      var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
-      return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
-    }
+    // get|set the document language and direction
+    get language() { return {
+      // get|set the document language (ISO-639-1)
+      get name() { return gLanguage; },
+      set name(lang) { loadLocale(lang, translateFragment); },
+
+      // get the direction (ltr|rtl) of the current language
+      get direction() {
+        // http://www.w3.org/International/questions/qa-scripts
+        // Arabic, Hebrew, Farsi, Pashto, Urdu
+        var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+        return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
+      }
+    };}
   };
 })(window, document);
 
@@ -318,20 +322,25 @@ document.mozL10n = (function(window, document, undefined) {
     get: translateString,
     set: function(key, val) { gL10nData[key] = val; },
 
-    // get|set the document language
-    get language() { return gLanguage; },
-    set language(lang) { loadLocale(lang, translateFragment); },
-
     // debug
     get text() { return gTextData; },
     get data() { return gL10nData; },
 
-    // get the direction (ltr|rtl) of the current language
-    get direction() {
-      // http://www.w3.org/International/questions/qa-scripts
-      // Arabic, Hebrew, Farsi, Pashto, Urdu
-      var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
-      return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
+    // get|set the document language and direction
+    get language() {
+      return {
+        // get|set the document language (ISO-639-1)
+        get name() { return gLanguage; },
+        set name(lang) { loadLocale(lang, translateFragment); },
+
+        // get the direction (ltr|rtl) of the current language
+        get direction() {
+          // http://www.w3.org/International/questions/qa-scripts
+          // Arabic, Hebrew, Farsi, Pashto, Urdu
+          var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+          return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
+        }
+      };
     }
   };
 })(window, document);

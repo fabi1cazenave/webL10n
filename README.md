@@ -43,28 +43,35 @@ JavaScript API
 
 ```javascript
 // Set the 'lang' and 'dir' attributes to <html> when the page is translated
-window.addEventListener('l10nLocaleLoaded', function showBody() {
+window.addEventListener('localized', function showBody() {
   var html = document.querySelector('html');
-  html.setAttribute('lang', document.mozL10n.language);
-  html.setAttribute('dir', document.mozL10n.direction);
+  var lang = document.mozL10n.language;
+  html.setAttribute('lang', lang.name);
+  html.setAttribute('dir', lang.direction);
 }, false);
 ```
-* `l10nLocaleLoaded` event: fired when the page has been translated
-* `language` property (read/write): language of the current document;
-* `direction` property (read-only): direction (ltr|rtl) of the current language.
-
-To get a translated string from a script, just use the ``get()`` method:
+* `localized` event: fired when the page has been translated;
+* `language` property (read-only): language of the current document
+    * `language.name` (read/write): ISO-639-1 code of the current language
+    * `language.dir` (read-only): direction (ltr|rtl) of the current language.
+* `get` method: get a translated string.
 
 ```javascript
 var message = document.mozL10n.get('test');
 alert(message);
 ```
 
+You will probably use a gettext-like alias:
+
+```javascript
+var _ = document.mozL10n.get;
+alert(_('test'));
+```
+
 To handle complex strings, the `get()` method can accept optional arguments:
 
 ```javascript
-var welcome = document.mozL10n.get('welcome', { user: "John" });
-alert(welcome);
+alert(_('welcome', { user: "John" }));
 ```
 
 where `welcome` is defined like this:
@@ -100,12 +107,46 @@ For security concerns, we currently assume that all strings are applied as `text
 ```ini
 welcome#text=welcome, {{user}}!
 welcome#html=welcome, <strong>{{user}}</strong>!
-welcome#markdown=welcome, **{{user}}**!
+welcome#mark=welcome, **{{user}}**!
 ```
 
 ### Plural, gender…
 
-`l10n.js` currently relies on the ``*.properties`` format, which is used in most Mozilla and Java projects. It is bullet-proof but limited (= key/value pairs), and we’re working on a more advanced alternative to support finer grammatical rules.
+The Mozilla l20n project introduces the concept of “expression”, which can be used to address most grammatical rules.
+
+As an example, the following strings might be gramatically incorrect when `n` equals zero or one:
+
+```ini
+[en-US]
+unread=You have {{n}} unread messages
+[fr]
+unread=Vous avez {{n}} nouveaux messages
+```
+
+Here’s a plural expression that can be used:
+
+```ini
+plural(n) {
+  n == 0 ? 'zero' : (n == 1 ? 'one' : 'many')
+}
+[en-US]
+unread[plural(n)]={
+  zero:You have no unread messages
+  one:You have one unread message
+  many:You have {{n}} unread messages
+}
+[fr]
+unread[plural(n)]={
+  zero:Vous n’avez pas de nouveau message
+  one:Vous avez un nouveau message
+  many:Vous avez {{n}} nouveaux messages
+}
+```
+
+Browser support
+---------------
+
+Tested on Mozilla Firefox. Should work on most modern browsers, including IE9 and later.
 
 
 License
