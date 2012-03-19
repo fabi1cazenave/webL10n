@@ -7,7 +7,7 @@
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     window.addEventListener('localized', function() {
-      var l10n = document.mozL10n;
+      var l10n = document.webL10n;
       document.querySelector('select').value = l10n.language.name;
       document.querySelector('#l10n textarea').textContent = l10n.text;
       document.querySelector('#json textarea').textContent =
@@ -44,7 +44,7 @@
       </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.mozL10n.language.name = this.value;">
+        <select onchange="document.webL10n.language.name = this.value;">
           <option disabled selected> </option>
           <option>en</option>
           <option>fr</option>

@@ -21,7 +21,7 @@
 
 'use strict';
 
-document.mozL10n = (function(window, document, undefined) {
+document.webL10n = (function(window, document, undefined) {
   var gL10nData = {};
   var gTextData = '';
   var gLanguage = '';
@@ -314,39 +314,7 @@ document.mozL10n = (function(window, document, undefined) {
   };
 })(window, document);
 
-/*
-document.mozL10n = (function(window, document, undefined) {
-  [...]
-  return {
-    // get|set a localized string
-    get: translateString,
-    set: function(key, val) { gL10nData[key] = val; },
-
-    // debug
-    get text() { return gTextData; },
-    get data() { return gL10nData; },
-
-    // get|set the document language and direction
-    get language() {
-      return {
-        // get|set the document language (ISO-639-1)
-        get name() { return gLanguage; },
-        set name(lang) { loadLocale(lang, translateFragment); },
-
-        // get the direction (ltr|rtl) of the current language
-        get direction() {
-          // http://www.w3.org/International/questions/qa-scripts
-          // Arabic, Hebrew, Farsi, Pashto, Urdu
-          var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
-          return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
-        }
-      };
-    }
-  };
-})(window, document);
-*/
-
-// gettext-like shortcut for navigator.mozL10n.get
+// gettext-like shortcut for navigator.webL10n.get
 if (window._ === undefined)
-  var _ = document.mozL10n.get;
+  var _ = document.webL10n.get;
 
