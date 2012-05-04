@@ -203,8 +203,8 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // translate a string
-  function translateString(key, args) {
-    var str = gL10nData[key];
+  function translateString(key, args, fallback) {
+    var str = gL10nData[key] || fallback;
     if (!str)
       return '{{' + key + '}}';
     // key is found, get the raw string and look for {{arguments}}
