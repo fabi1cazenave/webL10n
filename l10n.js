@@ -18,7 +18,7 @@
   * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   * IN THE SOFTWARE.
   */
-
+/*jshint browser: true, devel: true, es5: true, globalstrict: true */
 'use strict';
 
 document.webL10n = (function(window, document, undefined) {
@@ -43,7 +43,7 @@ document.webL10n = (function(window, document, undefined) {
     var index = '[' + gMacros._pluralRules(n) + ']';
 
     // try to find a [zero|one|two] key if it's defined
-    if (n == 0 && (key + '[zero]') in gL10nData) {
+    if (n === 0 && (key + '[zero]') in gL10nData) {
       str = gL10nData[key + '[zero]'][prop];
     } else if (n == 1 && (key + '[one]') in gL10nData) {
       str = gL10nData[key + '[one]'][prop];
@@ -59,14 +59,16 @@ document.webL10n = (function(window, document, undefined) {
   // parser
 
   function evalString(text) {
+    var open  = new RegExp('\\{', 'g'),
+        close = new RegExp('\\}', 'g');
     return text.replace(/\\\\/g, '\\')
                .replace(/\\n/g, '\n')
                .replace(/\\r/g, '\r')
                .replace(/\\t/g, '\t')
                .replace(/\\b/g, '\b')
                .replace(/\\f/g, '\f')
-               .replace(/\\{/g, '{')
-               .replace(/\\}/g, '}')
+               .replace(open, '{')
+               .replace(close, '}')
                .replace(/\\"/g, '"')
                .replace(/\\'/g, "'");
   }
@@ -158,7 +160,7 @@ document.webL10n = (function(window, document, undefined) {
     xhr.overrideMimeType('text/plain; charset=utf-8');
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
-        if (xhr.status == 200 || xhr.status == 0) {
+        if (xhr.status == 200 || xhr.status === 0) {
           //parse(xhr.responseText, lang);
           if (onSuccess)
             onSuccess(xhr.responseText);
@@ -183,6 +185,7 @@ document.webL10n = (function(window, document, undefined) {
 
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
+    /*jshint newcap: false */
     clear();
 
     // check all <link type="application/l10n" href="..." /> nodes
@@ -205,10 +208,11 @@ document.webL10n = (function(window, document, undefined) {
         evtObject.language = lang;
         window.dispatchEvent(evtObject);
       }
-    }
+    };
 
     // load all resource files
     function l10nResourceLink(link) {
+      /*jshint validthis: true*/
       var href = link.href;
       var type = link.type;
       this.load = function(lang, callback) {
@@ -546,7 +550,7 @@ document.webL10n = (function(window, document, undefined) {
       '1': function(n) {
         if ((isBetween((n % 100), 3, 10)))
           return 'few';
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if ((isBetween((n % 100), 11, 99)))
           return 'many';
@@ -557,7 +561,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '2': function(n) {
-        if (n != 0 && (n % 10) == 0)
+        if (n !== 0 && (n % 10) === 0)
           return 'many';
         if (n == 2)
           return 'two';
@@ -581,7 +585,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '6': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if ((n % 10) == 1 && (n % 100) != 11)
           return 'one';
@@ -606,7 +610,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '9': function(n) {
-        if (n == 0 || n != 1 && (isBetween((n % 100), 1, 19)))
+        if (n === 0 || n != 1 && (isBetween((n % 100), 1, 19)))
           return 'few';
         if (n == 1)
           return 'one';
@@ -622,7 +626,7 @@ document.webL10n = (function(window, document, undefined) {
       '11': function(n) {
         if ((isBetween((n % 10), 2, 4)) && !(isBetween((n % 100), 12, 14)))
           return 'few';
-        if ((n % 10) == 0 ||
+        if ((n % 10) === 0 ||
             (isBetween((n % 10), 5, 9)) ||
             (isBetween((n % 100), 11, 14)))
           return 'many';
@@ -658,7 +662,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '15': function(n) {
-        if (n == 0 || (isBetween((n % 100), 2, 10)))
+        if (n === 0 || (isBetween((n % 100), 2, 10)))
           return 'few';
         if ((isBetween((n % 100), 11, 19)))
           return 'many';
@@ -674,7 +678,7 @@ document.webL10n = (function(window, document, undefined) {
       '17': function(n) {
         if (n == 3)
           return 'few';
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if (n == 6)
           return 'many';
@@ -685,9 +689,9 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '18': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
-        if ((isBetween(n, 0, 2)) && n != 0 && n != 2)
+        if ((isBetween(n, 0, 2)) && n !== 0 && n != 2)
           return 'one';
         return 'other';
       },
@@ -705,7 +709,7 @@ document.webL10n = (function(window, document, undefined) {
               isBetween((n % 100), 90, 99)
             ))
           return 'few';
-        if ((n % 1000000) == 0 && n != 0)
+        if ((n % 1000000) === 0 && n !== 0)
           return 'many';
         if ((n % 10) == 2 && !isIn((n % 100), [12, 72, 92]))
           return 'two';
@@ -714,7 +718,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '21': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if (n == 1)
           return 'one';
@@ -726,7 +730,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '23': function(n) {
-        if ((isBetween((n % 10), 1, 2)) || (n % 20) == 0)
+        if ((isBetween((n % 10), 1, 2)) || (n % 20) === 0)
           return 'one';
         return 'other';
       },
