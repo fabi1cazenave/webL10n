@@ -95,6 +95,12 @@ You can specify a default value in JSON for any argument in the HTML document wi
 <p data-l10n-id="welcome" data-l10n-args='{ "user": "your awesomeness" }'>Welcome!</p>
 ```
 
+### @import rules
+
+If you don’t want to have all your locales in a single file or if you want to
+share strings between several pages, you can use CSS-like `@import` rules.
+
+More information on the [Language Selection](https://github.com/fabi1cazenave/webL10n/wiki/Language-Selection) page.
 
 ### Pluralization
 
@@ -123,6 +129,7 @@ unreadMessages[other] = Vous avez {{n}} nouveaux messages
 ```
 
 Here, `unreadMessages` is an array and `{[plural(n)]}` is the selected index.
+
 `plural()` returns zero | one | two | few | many | other, depending on `n` and the current language, as specified in the Unicode rules.
 
 
@@ -176,6 +183,7 @@ Alternatively, we could use a JSON- or YAML-like file format to handle the whole
 ### Logical expressions
 
 The Mozilla l20n/LOL project introduces the concept of “expression”, which can be used to address most grammatical rules or some very specific situations.
+
 The `plural()` macro above could be easily defined as an expression:
 
 ```ini
@@ -187,6 +195,7 @@ Browser support
 ---------------
 
 Tested on Mozilla Firefox. Should work on most modern browsers, including IE9 and later.
+
 I don’t have much time to make it work on IE6/7/8 but if you do, a pull request would be very welcome — even if it breaks the current JavaScript API.
 
 
