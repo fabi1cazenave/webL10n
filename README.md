@@ -194,7 +194,7 @@ plural(n) = { n == 0 ? 'zero' : (n == 1 ? 'one' : 'other') }
 Browser support
 ---------------
 
-Tested on Mozilla Firefox. Should work on most modern browsers, including IE9 and later.
+Tested on Firefox, Chrome and Opera. Should work on most modern browsers, including IE9 and later, but the current demo requires CSS flexbox…
 
 I don’t have much time to make it work on IE6/7/8 but if you do, a pull request would be very welcome — even if it breaks the current JavaScript API.
 
