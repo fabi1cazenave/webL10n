@@ -22,10 +22,11 @@
 'use strict';
 
 document.webL10n = (function(window, document, undefined) {
-  var gL10nData = {};
-  var gTextData = '';
-  var gLanguage = '';
-  var gMacros = {};
+  var gL10nData = {},
+      gTextData = '',
+      gLanguage = '',
+      gMacros = {},
+      gTextProp;
 
   // pre-defined macros
   gMacros.plural = function(str, param, key, prop) {
@@ -139,10 +140,11 @@ document.webL10n = (function(window, document, undefined) {
         prop = key.substr(index + 1);
       } else {     // no attribute: assuming .textContent by default
         id = key;  // (this could have been .innerHTML as well...)
-        prop = 'textContent';
+        prop = gTextProp;
       }
-      if (!gL10nData[id])
+      if (!gL10nData[id]) {
         gL10nData[id] = {};
+      }
       gL10nData[id][prop] = data[key];
     }
   }
@@ -157,7 +159,9 @@ document.webL10n = (function(window, document, undefined) {
   function loadResource(href, onSuccess, onFailure, asynchronous) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', href, asynchronous);
-    xhr.overrideMimeType('text/plain; charset=utf-8');
+    if (xhr.overrideMimeType) {
+      xhr.overrideMimeType('text/plain; charset=utf-8');
+    }
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
         if (xhr.status == 200 || xhr.status === 0) {
@@ -200,13 +204,19 @@ document.webL10n = (function(window, document, undefined) {
       gResourceCount++;
       if (gResourceCount >= langCount) {
         // execute the [optional] callback
-        if (callback)
+        if (callback) {
           callback();
+        }
+
         // fire a 'localized' DOM event
+        if (document.createEvent) {
         var evtObject = document.createEvent('Event');
         evtObject.initEvent('localized', false, false);
         evtObject.language = lang;
         window.dispatchEvent(evtObject);
+        } else {
+          // @TODO support IE
+        }
       }
     };
 
@@ -307,8 +317,38 @@ document.webL10n = (function(window, document, undefined) {
     return str;
   }
 
+  /**
+   * Create the dataset property on browsers that don't support it
+   *
+   * @param {DOMElement} element
+   *
+   * @return void
+   */
+  function getDataset(element) {
+    var dataset = {},
+        datas = 0,
+        attr,
+        attrObj,
+        dataKey;
+    var camelize = function(e) {return e.substr(1).toUpperCase();};
+    for (attr in element.attributes) {
+      attrObj = element.attributes[attr];
+      if (attrObj.name && /^data-/.test(attrObj.name) ) {
+        dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
+        dataset[dataKey] = attrObj.value;
+        datas++;
+      }
+    }
+    if (datas > 0) {
+      element.dataset = dataset;
+    }
+
+  }
   // translate an HTML element
   function translateElement(element) {
+    if (!element.dataset) {
+      getDataset(element);
+    }
     if (!element || !element.dataset)
       return;
 
@@ -324,8 +364,10 @@ document.webL10n = (function(window, document, undefined) {
     // get the related l10n object
     var key = element.dataset.l10nId;
     var data = getL10nData(key, args);
-    if (!data)
+    if (!data) {
+      console.log('No data for ' + key);
       return;
+    }
 
     // translate element
     // TODO: security check?
@@ -344,7 +386,10 @@ document.webL10n = (function(window, document, undefined) {
       translateElement(children[i]);
 
     // translate element itself if necessary
-    if (element.dataset.l10nId)
+    if (!element.dataset) {
+      getDataset(element);
+    }
+    if (element.dataset && element.dataset.l10nId)
       translateElement(element);
   }
 
@@ -761,9 +806,16 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // load the default locale on startup
-  window.addEventListener('DOMContentLoaded', function() {
-    loadLocale(navigator.language, translateFragment);
-  });
+  function domContentLoaded() {
+    gTextProp = document.body.textContent ? 'textContent' : 'innerText';
+    loadLocale(window.navigator.userLanguage || navigator.language, translateFragment);
+  }
+  if ( document.addEventListener ) {
+    document.addEventListener('DOMContentLoaded', domContentLoaded);
+  } else {
+    // @TODO IE 9+ supports DOMContentLoaded
+    window.attachEvent( "onload", domContentLoaded);
+  }
 
   // Public API
   return {
@@ -774,21 +826,22 @@ document.webL10n = (function(window, document, undefined) {
     },
 
     // debug
-    get data() { return gL10nData; },
-    get text() { return gTextData; },
+    getData: function() { return gL10nData; },
+    getText: function() { return gTextData; },
 
     // get|set the document language and direction
-    get language() {
+    getLanguage: function() {
       return {
         // get|set the document language (ISO-639-1)
-        get code() { return gLanguage; },
-        set code(lang) { loadLocale(lang, translateFragment); },
+        getCode: function() { return gLanguage; },
+        setCode: function (lang) { loadLocale(lang, translateFragment); },
 
         // get the direction (ltr|rtl) of the current language
-        get direction() {
+        getDirection: function() {
           // http://www.w3.org/International/questions/qa-scripts
           // Arabic, Hebrew, Farsi, Pashto, Urdu
           var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+
           return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
         }
       };
