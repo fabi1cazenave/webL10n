@@ -370,7 +370,32 @@ document.webL10n = (function(window, document, undefined) {
     }
 
     // translate element
+    // For the node content, replace the content of the first child textNode
+    // and clear other child textNodes
     // TODO: security check?
+    if (data[gTextProp]) {
+      if (element.children.length === 0) {
+        element[gTextProp] = data[gTextProp];
+      } else {
+        var children = element.childNodes,
+            found = false;
+        for (var i = 0, l = children.length; i < l; i++) {
+          if (children[i].nodeType === 3 && /\S/.test(children[i].textContent)) {
+            if (found) {
+              children[i][gTextProp] = '';
+            } else {
+              children[i].nodeValue = data[gTextProp]; // Using nodeValue seems cross-browsers
+              found = true;
+            }
+          }
+        }
+        if (!found) {
+          console.log('WTF ?');
+        }
+      }
+      delete data[gTextProp];
+    }
+
     for (var k in data)
       element[k] = data[k];
   }
