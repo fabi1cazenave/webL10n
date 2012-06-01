@@ -26,8 +26,36 @@ document.webL10n = (function(window, document, undefined) {
       gTextData = '',
       gLanguage = '',
       gMacros = {},
-      gTextProp;
+      gTextProp,
+      qsa;
 
+  /**
+   * Get a QuerySelectorAll function
+   *
+   * If document.querySelectorAll is not available, try to use Qwery or Sizzle
+   *
+   * @return {Function}
+   */
+  function getQsa() {
+    if (document.querySelectorAll) {
+      return function (selector, element) {
+        return element ? element.querySelectorAll(selector) : document.querySelectorAll(selector);
+      };
+    } else if (window.Sizzle) {
+      return function (selector, element) {
+        return element ? window.Sizzle(selector, element) : window.Sizzle(selector);
+      };
+    } else if (window.qwery) {
+      return function (selector, element) {
+        return element ? window.qwery(selector, element) : window.qwery(selector);
+      };
+    } else {
+      console.warn('no QuerySelector method available');
+      return function (selector, element) {
+        return [];
+      };
+    }
+  }
   // pre-defined macros
   gMacros.plural = function(str, param, key, prop) {
     var n = parseFloat(param);
@@ -35,7 +63,7 @@ document.webL10n = (function(window, document, undefined) {
       return str;
 
     // TODO: support other properties (l20n still doesn't...)
-    if (prop != 'textContent')
+    if (prop != gTextProp)
       return str;
 
     // initialize _pluralRules
@@ -138,8 +166,8 @@ document.webL10n = (function(window, document, undefined) {
       if (index > 0) { // an attribute has been specified
         id = key.substring(0, index);
         prop = key.substr(index + 1);
-      } else {     // no attribute: assuming .textContent by default
-        id = key;  // (this could have been .innerHTML as well...)
+      } else {     // no attribute: assuming node content by default
+        id = key;
         prop = gTextProp;
       }
       if (!gL10nData[id]) {
@@ -178,7 +206,7 @@ document.webL10n = (function(window, document, undefined) {
 
   // load and parse the specified resource file
   function loadAndParse(href, lang, onSuccess, onFailure) {
-    var baseURL = href.replace(/\/[^\/]*$/, '/');
+    var baseURL = href.substr(0, 4) === 'http' ? href.replace(/\/[^\/]*$/, '/') : '';
     loadResource(href, function(response) {
       parse(response, lang, baseURL);
       if (onSuccess)
@@ -193,7 +221,7 @@ document.webL10n = (function(window, document, undefined) {
 
     // check all <link type="application/l10n" href="..." /> nodes
     // and load the resource files
-    var langLinks = document.querySelectorAll('link[type="application/l10n"]');
+    var langLinks = qsa('link[type="application/l10n"]');
     var langCount = langLinks.length;
 
     // start the callback when all resources are loaded
@@ -209,12 +237,14 @@ document.webL10n = (function(window, document, undefined) {
 
         // fire a 'localized' DOM event
         if (document.createEvent) {
-        var evtObject = document.createEvent('Event');
-        evtObject.initEvent('localized', false, false);
-        evtObject.language = lang;
-        window.dispatchEvent(evtObject);
-        } else {
-          // @TODO support IE
+          var evtObject = document.createEvent('Event');
+          evtObject.initEvent('localized', false, false);
+          evtObject.language = lang;
+          window.dispatchEvent(evtObject);
+        } else if (document.createEventObject) {
+          // Hack to simulate a custom event in IE
+          // To catch this event, add an event hendler to "onpropertychange"
+          document.documentElement.localized = 1;
         }
       }
     };
@@ -303,7 +333,7 @@ document.webL10n = (function(window, document, undefined) {
       if (arg in args) {
         sub = args[arg];
       } else if (arg in gL10nData) {
-        sub = gL10nData[arg].textContent;
+        sub = gL10nData[arg][gTextProp];
       } else {
         console.warn('[l10n] could not find argument {{' + arg + '}}');
         return str;
@@ -331,10 +361,10 @@ document.webL10n = (function(window, document, undefined) {
         dataKey;
     function camelize(e) {
       return e.substr(1).toUpperCase();
-    };
+    }
     for (attr in element.attributes) {
       attrObj = element.attributes[attr];
-      if (attrObj.name && /^data-/.test(attrObj.name)) {
+      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' && /^data-/.test(attrObj.name) ) {
         dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
         dataset[dataKey] = attrObj.value;
         datas++;
@@ -384,7 +414,7 @@ document.webL10n = (function(window, document, undefined) {
           if (children[i].nodeType === 3 &&
               /\S/.test(children[i].textContent)) {
             if (found) {
-              children[i][gTextProp] = '';
+              children[i].nodeValue = '';
             } else {
               // Using nodeValue seems cross-browser
               children[i].nodeValue = data[gTextProp];
@@ -405,10 +435,10 @@ document.webL10n = (function(window, document, undefined) {
 
   // translate an HTML subtree
   function translateFragment(element) {
-    element = element || document.querySelector('html');
+    element = element || qsa('html')[0];
 
     // check all translatable children (= w/ a `data-l10n-id' attribute)
-    var children = element.querySelectorAll('*[data-l10n-id]');
+    var children = qsa('*[data-l10n-id]', element);
     var elementCount = children.length;
     for (var i = 0; i < elementCount; i++)
       translateElement(children[i]);
@@ -835,6 +865,8 @@ document.webL10n = (function(window, document, undefined) {
 
   // load the default locale on startup
   function startup() {
+    // Init for cross browsers compatibility
+    qsa = getQsa();
     gTextProp = document.body.textContent ? 'textContent' : 'innerText';
     var lang = window.navigator.userLanguage || navigator.language;
     loadLocale(lang, translateFragment);
@@ -850,7 +882,7 @@ document.webL10n = (function(window, document, undefined) {
     // get a localized string
     get: function(key, args, fallback) {
       var data = getL10nData(key, args) || fallback;
-      return data ? data.textContent : '{{' + key + '}}';
+      return data ? data[gTextProp] : '{{' + key + '}}';
     },
 
     // debug
