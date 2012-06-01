@@ -18,14 +18,15 @@
   * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   * IN THE SOFTWARE.
   */
-
+/*jshint browser: true, devel: true, es5: true, globalstrict: true */
 'use strict';
 
 document.webL10n = (function(window, document, undefined) {
-  var gL10nData = {};
-  var gTextData = '';
-  var gLanguage = '';
-  var gMacros = {};
+  var gL10nData = {},
+      gTextData = '',
+      gLanguage = '',
+      gMacros = {},
+      gTextProp;
 
   // pre-defined macros
   gMacros.plural = function(str, param, key, prop) {
@@ -43,7 +44,7 @@ document.webL10n = (function(window, document, undefined) {
     var index = '[' + gMacros._pluralRules(n) + ']';
 
     // try to find a [zero|one|two] key if it's defined
-    if (n == 0 && (key + '[zero]') in gL10nData) {
+    if (n === 0 && (key + '[zero]') in gL10nData) {
       str = gL10nData[key + '[zero]'][prop];
     } else if (n == 1 && (key + '[one]') in gL10nData) {
       str = gL10nData[key + '[one]'][prop];
@@ -59,14 +60,16 @@ document.webL10n = (function(window, document, undefined) {
   // parser
 
   function evalString(text) {
+    var open  = new RegExp('\\{', 'g'),
+        close = new RegExp('\\}', 'g');
     return text.replace(/\\\\/g, '\\')
                .replace(/\\n/g, '\n')
                .replace(/\\r/g, '\r')
                .replace(/\\t/g, '\t')
                .replace(/\\b/g, '\b')
                .replace(/\\f/g, '\f')
-               .replace(/\\{/g, '{')
-               .replace(/\\}/g, '}')
+               .replace(open, '{')
+               .replace(close, '}')
                .replace(/\\"/g, '"')
                .replace(/\\'/g, "'");
   }
@@ -137,10 +140,11 @@ document.webL10n = (function(window, document, undefined) {
         prop = key.substr(index + 1);
       } else {     // no attribute: assuming .textContent by default
         id = key;  // (this could have been .innerHTML as well...)
-        prop = 'textContent';
+        prop = gTextProp;
       }
-      if (!gL10nData[id])
+      if (!gL10nData[id]) {
         gL10nData[id] = {};
+      }
       gL10nData[id][prop] = data[key];
     }
   }
@@ -155,10 +159,12 @@ document.webL10n = (function(window, document, undefined) {
   function loadResource(href, onSuccess, onFailure, asynchronous) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', href, asynchronous);
-    xhr.overrideMimeType('text/plain; charset=utf-8');
+    if (xhr.overrideMimeType) {
+      xhr.overrideMimeType('text/plain; charset=utf-8');
+    }
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
-        if (xhr.status == 200 || xhr.status == 0) {
+        if (xhr.status == 200 || xhr.status === 0) {
           //parse(xhr.responseText, lang);
           if (onSuccess)
             onSuccess(xhr.responseText);
@@ -183,6 +189,7 @@ document.webL10n = (function(window, document, undefined) {
 
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
+    /*jshint newcap: false */
     clear();
 
     // check all <link type="application/l10n" href="..." /> nodes
@@ -197,18 +204,25 @@ document.webL10n = (function(window, document, undefined) {
       gResourceCount++;
       if (gResourceCount >= langCount) {
         // execute the [optional] callback
-        if (callback)
+        if (callback) {
           callback();
+        }
+
         // fire a 'localized' DOM event
+        if (document.createEvent) {
         var evtObject = document.createEvent('Event');
         evtObject.initEvent('localized', false, false);
         evtObject.language = lang;
         window.dispatchEvent(evtObject);
+        } else {
+          // @TODO support IE
+        }
       }
-    }
+    };
 
     // load all resource files
     function l10nResourceLink(link) {
+      /*jshint validthis: true*/
       var href = link.href;
       var type = link.type;
       this.load = function(lang, callback) {
@@ -303,8 +317,38 @@ document.webL10n = (function(window, document, undefined) {
     return str;
   }
 
+  /**
+   * Create the dataset property on browsers that don't support it
+   *
+   * @param {DOMElement} element
+   *
+   * @return void
+   */
+  function getDataset(element) {
+    var dataset = {},
+        datas = 0,
+        attr,
+        attrObj,
+        dataKey;
+    var camelize = function(e) {return e.substr(1).toUpperCase();};
+    for (attr in element.attributes) {
+      attrObj = element.attributes[attr];
+      if (attrObj.name && /^data-/.test(attrObj.name) ) {
+        dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
+        dataset[dataKey] = attrObj.value;
+        datas++;
+      }
+    }
+    if (datas > 0) {
+      element.dataset = dataset;
+    }
+
+  }
   // translate an HTML element
   function translateElement(element) {
+    if (!element.dataset) {
+      getDataset(element);
+    }
     if (!element || !element.dataset)
       return;
 
@@ -320,11 +364,38 @@ document.webL10n = (function(window, document, undefined) {
     // get the related l10n object
     var key = element.dataset.l10nId;
     var data = getL10nData(key, args);
-    if (!data)
+    if (!data) {
+      console.log('No data for ' + key);
       return;
+    }
 
     // translate element
+    // For the node content, replace the content of the first child textNode
+    // and clear other child textNodes
     // TODO: security check?
+    if (data[gTextProp]) {
+      if (element.children.length === 0) {
+        element[gTextProp] = data[gTextProp];
+      } else {
+        var children = element.childNodes,
+            found = false;
+        for (var i = 0, l = children.length; i < l; i++) {
+          if (children[i].nodeType === 3 && /\S/.test(children[i].textContent)) {
+            if (found) {
+              children[i][gTextProp] = '';
+            } else {
+              children[i].nodeValue = data[gTextProp]; // Using nodeValue seems cross-browsers
+              found = true;
+            }
+          }
+        }
+        if (!found) {
+          console.log('WTF ?');
+        }
+      }
+      delete data[gTextProp];
+    }
+
     for (var k in data)
       element[k] = data[k];
   }
@@ -340,7 +411,10 @@ document.webL10n = (function(window, document, undefined) {
       translateElement(children[i]);
 
     // translate element itself if necessary
-    if (element.dataset.l10nId)
+    if (!element.dataset) {
+      getDataset(element);
+    }
+    if (element.dataset && element.dataset.l10nId)
       translateElement(element);
   }
 
@@ -546,7 +620,7 @@ document.webL10n = (function(window, document, undefined) {
       '1': function(n) {
         if ((isBetween((n % 100), 3, 10)))
           return 'few';
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if ((isBetween((n % 100), 11, 99)))
           return 'many';
@@ -557,7 +631,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '2': function(n) {
-        if (n != 0 && (n % 10) == 0)
+        if (n !== 0 && (n % 10) === 0)
           return 'many';
         if (n == 2)
           return 'two';
@@ -581,7 +655,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '6': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if ((n % 10) == 1 && (n % 100) != 11)
           return 'one';
@@ -606,7 +680,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '9': function(n) {
-        if (n == 0 || n != 1 && (isBetween((n % 100), 1, 19)))
+        if (n === 0 || n != 1 && (isBetween((n % 100), 1, 19)))
           return 'few';
         if (n == 1)
           return 'one';
@@ -622,7 +696,7 @@ document.webL10n = (function(window, document, undefined) {
       '11': function(n) {
         if ((isBetween((n % 10), 2, 4)) && !(isBetween((n % 100), 12, 14)))
           return 'few';
-        if ((n % 10) == 0 ||
+        if ((n % 10) === 0 ||
             (isBetween((n % 10), 5, 9)) ||
             (isBetween((n % 100), 11, 14)))
           return 'many';
@@ -658,7 +732,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '15': function(n) {
-        if (n == 0 || (isBetween((n % 100), 2, 10)))
+        if (n === 0 || (isBetween((n % 100), 2, 10)))
           return 'few';
         if ((isBetween((n % 100), 11, 19)))
           return 'many';
@@ -674,7 +748,7 @@ document.webL10n = (function(window, document, undefined) {
       '17': function(n) {
         if (n == 3)
           return 'few';
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if (n == 6)
           return 'many';
@@ -685,9 +759,9 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '18': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
-        if ((isBetween(n, 0, 2)) && n != 0 && n != 2)
+        if ((isBetween(n, 0, 2)) && n !== 0 && n != 2)
           return 'one';
         return 'other';
       },
@@ -705,7 +779,7 @@ document.webL10n = (function(window, document, undefined) {
               isBetween((n % 100), 90, 99)
             ))
           return 'few';
-        if ((n % 1000000) == 0 && n != 0)
+        if ((n % 1000000) === 0 && n !== 0)
           return 'many';
         if ((n % 10) == 2 && !isIn((n % 100), [12, 72, 92]))
           return 'two';
@@ -714,7 +788,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '21': function(n) {
-        if (n == 0)
+        if (n === 0)
           return 'zero';
         if (n == 1)
           return 'one';
@@ -726,7 +800,7 @@ document.webL10n = (function(window, document, undefined) {
         return 'other';
       },
       '23': function(n) {
-        if ((isBetween((n % 10), 1, 2)) || (n % 20) == 0)
+        if ((isBetween((n % 10), 1, 2)) || (n % 20) === 0)
           return 'one';
         return 'other';
       },
@@ -757,9 +831,16 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // load the default locale on startup
-  window.addEventListener('DOMContentLoaded', function() {
-    loadLocale(navigator.language, translateFragment);
-  });
+  function domContentLoaded() {
+    gTextProp = document.body.textContent ? 'textContent' : 'innerText';
+    loadLocale(window.navigator.userLanguage || navigator.language, translateFragment);
+  }
+  if ( document.addEventListener ) {
+    document.addEventListener('DOMContentLoaded', domContentLoaded);
+  } else {
+    // @TODO IE 9+ supports DOMContentLoaded
+    window.attachEvent( "onload", domContentLoaded);
+  }
 
   // Public API
   return {
@@ -770,21 +851,22 @@ document.webL10n = (function(window, document, undefined) {
     },
 
     // debug
-    get data() { return gL10nData; },
-    get text() { return gTextData; },
+    getData: function() { return gL10nData; },
+    getText: function() { return gTextData; },
 
     // get|set the document language and direction
-    get language() {
+    getLanguage: function() {
       return {
         // get|set the document language (ISO-639-1)
-        get code() { return gLanguage; },
-        set code(lang) { loadLocale(lang, translateFragment); },
+        getCode: function() { return gLanguage; },
+        setCode: function (lang) { loadLocale(lang, translateFragment); },
 
         // get the direction (ltr|rtl) of the current language
-        get direction() {
+        getDirection: function() {
           // http://www.w3.org/International/questions/qa-scripts
           // Arabic, Hebrew, Farsi, Pashto, Urdu
           var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+
           return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
         }
       };
