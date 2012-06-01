@@ -4,15 +4,34 @@
   <title> web-l10n test page </title>
   <meta charset="utf-8" />
   <link rel="resource" type="application/l10n" href="locales.properties" />
+  <!--[if lte IE 7]>
+  <script type="text/javascript" src="https://raw.github.com/douglascrockford/JSON-js/master/json.js"></script>
+  <script type="text/javascript" src="https://raw.github.com/ded/qwery/master/qwery.min.js"></script>
+  <![endif]-->
+  <!-- You can also replace qwery with sizzle
+  <script type="text/javascript" src="https://raw.github.com/jquery/sizzle/master/sizzle.js"></script>
+  -->
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
-    window.addEventListener('localized', function() {
-      var l10n = document.webL10n;
-      document.querySelector('select').value = l10n.language.code;
-      document.querySelector('#l10n textarea').textContent = l10n.text;
-      document.querySelector('#json textarea').textContent =
-          JSON.stringify(l10n.data, undefined, 2);
-    }, false);
+    (function () {
+     var onLocalized = function() {
+       var l10n = document.webL10n,
+           textProp = document.body.textContent ? 'textContent' : 'innerText';
+       document.getElementsByTagName('select')[0].value = l10n.getLanguage().getCode();
+       document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] = l10n.getText();
+       document.getElementById('json').getElementsByTagName('textarea')[0][textProp] = JSON.stringify(l10n.getData(), undefined, 2);
+     };
+     if (document.addEventListener) {
+       window.addEventListener('localized', onLocalized, false);
+       } else {
+       document.documentElement.localized = 0;
+       document.documentElement.attachEvent("onpropertychange", function (e) {
+         if (e.propertyName === 'localized') {
+           onLocalized();
+         }
+       });
+     }
+     })();
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
@@ -55,9 +74,17 @@
         <button data-l10n-id="hello" accesskey="h" title="click"
             onclick="alert(_('sayHello'));">Hello!</button>
       </p>
+      <p data-l10n-id="Children">
+
+      Translate
+
+
+      a node with children
+        <span data-l10n-id="Child">I'm a child</span>
+      </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.webL10n.language.code = this.value;">
+        <select onchange="document.webL10n.getLanguage().setCode(this.value || this.options[this.selectedIndex].text);">
           <option disabled selected> </option>
           <option>en</option>
           <option>fr</option>
@@ -69,11 +96,11 @@
   <div id="data">
     <div id="l10n">
       <p> l10n resources: </p>
-      <textarea readonly></textarea>
+      <textarea readonly rows="24" cols="80"></textarea>
     </div>
     <div id="json">
       <p> parsed data: </p>
-      <textarea readonly></textarea>
+      <textarea readonly rows="24" cols="80"></textarea>
     </div>
   </div>
 </body>
