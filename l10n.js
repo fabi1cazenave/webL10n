@@ -60,16 +60,16 @@ document.webL10n = (function(window, document, undefined) {
   // parser
 
   function evalString(text) {
-    var open  = new RegExp('\\{', 'g'),
-        close = new RegExp('\\}', 'g');
+    if (text.lastIndexOf('\\') >= 0)
+      return text;
     return text.replace(/\\\\/g, '\\')
                .replace(/\\n/g, '\n')
                .replace(/\\r/g, '\r')
                .replace(/\\t/g, '\t')
                .replace(/\\b/g, '\b')
                .replace(/\\f/g, '\f')
-               .replace(open, '{')
-               .replace(close, '}')
+               .replace(/\\{/g, '{')
+               .replace(/\\}/g, '}')
                .replace(/\\"/g, '"')
                .replace(/\\'/g, "'");
   }
@@ -165,7 +165,6 @@ document.webL10n = (function(window, document, undefined) {
     xhr.onreadystatechange = function() {
       if (xhr.readyState == 4) {
         if (xhr.status == 200 || xhr.status === 0) {
-          //parse(xhr.responseText, lang);
           if (onSuccess)
             onSuccess(xhr.responseText);
         } else {
@@ -330,10 +329,12 @@ document.webL10n = (function(window, document, undefined) {
         attr,
         attrObj,
         dataKey;
-    var camelize = function(e) {return e.substr(1).toUpperCase();};
+    function camelize(e) {
+      return e.substr(1).toUpperCase();
+    };
     for (attr in element.attributes) {
       attrObj = element.attributes[attr];
-      if (attrObj.name && /^data-/.test(attrObj.name) ) {
+      if (attrObj.name && /^data-/.test(attrObj.name)) {
         dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
         dataset[dataKey] = attrObj.value;
         datas++;
@@ -365,7 +366,7 @@ document.webL10n = (function(window, document, undefined) {
     var key = element.dataset.l10nId;
     var data = getL10nData(key, args);
     if (!data) {
-      console.log('No data for ' + key);
+      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
       return;
     }
 
@@ -380,11 +381,13 @@ document.webL10n = (function(window, document, undefined) {
         var children = element.childNodes,
             found = false;
         for (var i = 0, l = children.length; i < l; i++) {
-          if (children[i].nodeType === 3 && /\S/.test(children[i].textContent)) {
+          if (children[i].nodeType === 3 &&
+              /\S/.test(children[i].textContent)) {
             if (found) {
               children[i][gTextProp] = '';
             } else {
-              children[i].nodeValue = data[gTextProp]; // Using nodeValue seems cross-browsers
+              // Using nodeValue seems cross-browser
+              children[i].nodeValue = data[gTextProp];
               found = true;
             }
           }
@@ -831,15 +834,15 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // load the default locale on startup
-  function domContentLoaded() {
+  function startup() {
     gTextProp = document.body.textContent ? 'textContent' : 'innerText';
-    loadLocale(window.navigator.userLanguage || navigator.language, translateFragment);
+    var lang = window.navigator.userLanguage || navigator.language;
+    loadLocale(lang, translateFragment);
   }
-  if ( document.addEventListener ) {
-    document.addEventListener('DOMContentLoaded', domContentLoaded);
-  } else {
-    // @TODO IE 9+ supports DOMContentLoaded
-    window.attachEvent( "onload", domContentLoaded);
+  if (document.addEventListener) { // IE9+
+    document.addEventListener('DOMContentLoaded', startup);
+  } else { // IE8 and before
+    window.attachEvent('onload', startup);
   }
 
   // Public API
@@ -859,14 +862,13 @@ document.webL10n = (function(window, document, undefined) {
       return {
         // get|set the document language (ISO-639-1)
         getCode: function() { return gLanguage; },
-        setCode: function (lang) { loadLocale(lang, translateFragment); },
+        setCode: function(lang) { loadLocale(lang, translateFragment); },
 
         // get the direction (ltr|rtl) of the current language
         getDirection: function() {
           // http://www.w3.org/International/questions/qa-scripts
           // Arabic, Hebrew, Farsi, Pashto, Urdu
           var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
-
           return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
         }
       };
