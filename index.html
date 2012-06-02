@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title> web-l10n test page </title>
+  <title> webL10n test page </title>
   <meta charset="utf-8" />
   <link rel="resource" type="application/l10n" href="locales.properties" />
   <!--[if lte IE 7]>
-  <script type="text/javascript" src="https://raw.github.com/douglascrockford/JSON-js/master/json.js"></script>
-  <script type="text/javascript" src="https://raw.github.com/ded/qwery/master/qwery.min.js"></script>
+    <script type="text/javascript" src="https://raw.github.com/douglascrockford/JSON-js/master/json.js"></script>
+    <script type="text/javascript" src="https://raw.github.com/ded/qwery/master/qwery.min.js"></script>
   <![endif]-->
   <!-- You can also replace qwery with sizzle
-  <script type="text/javascript" src="https://raw.github.com/jquery/sizzle/master/sizzle.js"></script>
+    <script type="text/javascript" src="https://raw.github.com/jquery/sizzle/master/sizzle.js"></script>
   -->
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
-    (function () {
+   (function () {
      var onLocalized = function() {
        var l10n = document.webL10n,
            textProp = document.body.textContent ? 'textContent' : 'innerText';
@@ -23,7 +23,7 @@
      };
      if (document.addEventListener) {
        window.addEventListener('localized', onLocalized, false);
-       } else {
+     } else {
        document.documentElement.localized = 0;
        document.documentElement.attachEvent("onpropertychange", function (e) {
          if (e.propertyName === 'localized') {
@@ -31,7 +31,7 @@
          }
        });
      }
-     })();
+   })();
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">

@@ -27,7 +27,7 @@ document.webL10n = (function(window, document, undefined) {
       gLanguage = '',
       gMacros = {},
       gTextProp,
-      qsa;
+      gQuerySelectorAll;
 
   /**
    * Get a QuerySelectorAll function
@@ -36,26 +36,30 @@ document.webL10n = (function(window, document, undefined) {
    *
    * @return {Function}
    */
-  function getQsa() {
+  function getQSA() {
     if (document.querySelectorAll) {
-      return function (selector, element) {
-        return element ? element.querySelectorAll(selector) : document.querySelectorAll(selector);
+      return function(selector, element) {
+        return element ? element.querySelectorAll(selector) :
+                        document.querySelectorAll(selector);
       };
     } else if (window.Sizzle) {
-      return function (selector, element) {
-        return element ? window.Sizzle(selector, element) : window.Sizzle(selector);
+      return function(selector, element) {
+        return element ? window.Sizzle(selector, element) :
+                         window.Sizzle(selector);
       };
     } else if (window.qwery) {
-      return function (selector, element) {
-        return element ? window.qwery(selector, element) : window.qwery(selector);
+      return function(selector, element) {
+        return element ? window.qwery(selector, element) :
+                         window.qwery(selector);
       };
     } else {
-      console.warn('no QuerySelector method available');
-      return function (selector, element) {
+      console.warn('[l10n] no QuerySelector method available');
+      return function(selector, element) {
         return [];
       };
     }
   }
+
   // pre-defined macros
   gMacros.plural = function(str, param, key, prop) {
     var n = parseFloat(param);
@@ -88,7 +92,7 @@ document.webL10n = (function(window, document, undefined) {
   // parser
 
   function evalString(text) {
-    if (text.lastIndexOf('\\') >= 0)
+    if (text.lastIndexOf('\\') < 0)
       return text;
     return text.replace(/\\\\/g, '\\')
                .replace(/\\n/g, '\n')
@@ -206,7 +210,8 @@ document.webL10n = (function(window, document, undefined) {
 
   // load and parse the specified resource file
   function loadAndParse(href, lang, onSuccess, onFailure) {
-    var baseURL = href.substr(0, 4) === 'http' ? href.replace(/\/[^\/]*$/, '/') : '';
+    var baseURL = (href.substr(0, 4) === 'http') ?
+      href.replace(/\/[^\/]*$/, '/') : '';
     loadResource(href, function(response) {
       parse(response, lang, baseURL);
       if (onSuccess)
@@ -221,7 +226,7 @@ document.webL10n = (function(window, document, undefined) {
 
     // check all <link type="application/l10n" href="..." /> nodes
     // and load the resource files
-    var langLinks = qsa('link[type="application/l10n"]');
+    var langLinks = gQuerySelectorAll('link[type="application/l10n"]');
     var langCount = langLinks.length;
 
     // start the callback when all resources are loaded
@@ -364,7 +369,8 @@ document.webL10n = (function(window, document, undefined) {
     }
     for (attr in element.attributes) {
       attrObj = element.attributes[attr];
-      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' && /^data-/.test(attrObj.name) ) {
+      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' &&
+          /^data-/.test(attrObj.name)) {
         dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
         dataset[dataKey] = attrObj.value;
         datas++;
@@ -435,10 +441,10 @@ document.webL10n = (function(window, document, undefined) {
 
   // translate an HTML subtree
   function translateFragment(element) {
-    element = element || qsa('html')[0];
+    element = element || gQuerySelectorAll('html')[0];
 
     // check all translatable children (= w/ a `data-l10n-id' attribute)
-    var children = qsa('*[data-l10n-id]', element);
+    var children = gQuerySelectorAll('*[data-l10n-id]', element);
     var elementCount = children.length;
     for (var i = 0; i < elementCount; i++)
       translateElement(children[i]);
@@ -865,8 +871,8 @@ document.webL10n = (function(window, document, undefined) {
 
   // load the default locale on startup
   function startup() {
-    // Init for cross browsers compatibility
-    qsa = getQsa();
+    // Init for cross-browser compatibility
+    gQuerySelectorAll = getQSA();
     gTextProp = document.body.textContent ? 'textContent' : 'innerText';
     var lang = window.navigator.userLanguage || navigator.language;
     loadLocale(lang, translateFragment);
