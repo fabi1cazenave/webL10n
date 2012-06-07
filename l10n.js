@@ -24,10 +24,37 @@
 document.webL10n = (function(window, document, undefined) {
   var gL10nData = {},
       gTextData = '',
+      gTextProp = 'textContent',
       gLanguage = '',
-      gMacros = {},
-      gTextProp,         // `textContent' (standard) or `innerText' (oldIE)
-      gQuerySelectorAll; // `querySelectorAll' (standard) or shim (oldIE)
+      gMacros = {};
+
+
+  /**
+   * helpers: "HTML API"
+   */
+
+  function getL10nResourceLinks() {
+    return document.querySelectorAll('link[type="application/l10n"]');
+  }
+
+  function getTranslatableChildren(element) {
+    return element ? element.querySelectorAll('*[data-l10n-id]') : [];
+  }
+
+  function getL10nAttributes(element) {
+    return element ? {
+      id: element.getAttribute('data-l10n-id'),
+      args: element.getAttribute('data-l10n-args')
+    } : {};
+  }
+
+  function fireL10nReadyEvent(lang) {
+    var evtObject = document.createEvent('Event');
+    evtObject.initEvent('localized', false, false);
+    evtObject.language = lang;
+    window.dispatchEvent(evtObject);
+  }
+
 
   /**
    * l10n resource parser:
@@ -184,10 +211,57 @@ document.webL10n = (function(window, document, undefined) {
     }, failureCallback, true);
   };
 
+  // load and parse all resources for the specified locale
+  function loadLocale(lang, callback) {
+    /*jshint newcap: false */
+    clear();
+
+    // check all <link type="application/l10n" href="..." /> nodes
+    // and load the resource files
+    var langLinks = getL10nResourceLinks();
+    var langCount = langLinks.length;
+
+    // start the callback when all resources are loaded
+    var onResourceLoaded = null;
+    var gResourceCount = 0;
+    onResourceLoaded = function() {
+      gResourceCount++;
+      if (gResourceCount >= langCount) {
+        if (callback) // execute the [optional] callback
+          callback();
+        fireL10nReadyEvent(lang); // fire a 'localized' DOM event
+      }
+    };
+
+    // load all resource files
+    function l10nResourceLink(link) {
+      /*jshint validthis: true*/
+      var href = link.href;
+      var type = link.type;
+      this.load = function(lang, callback) {
+        var applied = lang;
+        parseResource(href, lang, callback, function() {
+          console.warn(href + ' not found.');
+          applied = '';
+        });
+        return applied; // return lang if found, an empty string if not found
+      };
+    }
+
+    gLanguage = lang;
+    for (var i = 0; i < langCount; i++) {
+      var resource = new l10nResourceLink(langLinks[i]);
+      var rv = resource.load(lang, onResourceLoaded);
+      if (rv != lang) // lang not found, used default resource instead
+        gLanguage = '';
+    }
+  }
+
+
   /**
    * Get rules for plural forms (shared with JetPack), see:
-   *  - http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html
-   *  - https://github.com/mozilla/addon-sdk/blob/master/python-lib/plural-rules-generator.py
+   * http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html
+   * https://github.com/mozilla/addon-sdk/blob/master/python-lib/plural-rules-generator.p
    *
    * @param {string} lang
    *    locale (language) used.
@@ -199,6 +273,7 @@ document.webL10n = (function(window, document, undefined) {
    *       fun(0)    -> 'other'
    *       fun(1000) -> 'other'.
    */
+
   function getPluralRules(lang) {
     var locales2rules = {
       'af': 3,
@@ -594,7 +669,7 @@ document.webL10n = (function(window, document, undefined) {
     return pluralRules[index];
   }
 
-  // pre-defined macros
+  // pre-defined 'plural' macro
   gMacros.plural = function(str, param, key, prop) {
     var n = parseFloat(param);
     if (isNaN(n))
@@ -623,95 +698,10 @@ document.webL10n = (function(window, document, undefined) {
     return str;
   };
 
+
   /**
-   * Get a QuerySelectorAll function (oldIE)
-   *
-   * If document.querySelectorAll is not available, try to use Qwery or Sizzle.
-   *
-   * @return {Function}
+   * l10n dictionary functions
    */
-  function getQSA() {
-    if (document.querySelectorAll) {
-      return function(selector, element) {
-        return element ? element.querySelectorAll(selector) :
-                        document.querySelectorAll(selector);
-      };
-    } else if (window.Sizzle) {
-      return function(selector, element) {
-        return element ? window.Sizzle(selector, element) :
-                         window.Sizzle(selector);
-      };
-    } else if (window.qwery) {
-      return function(selector, element) {
-        return element ? window.qwery(selector, element) :
-                         window.qwery(selector);
-      };
-    } else {
-      console.warn('[l10n] no QuerySelector method available');
-      return function(selector, element) {
-        return [];
-      };
-    }
-  }
-
-  // load and parse all resources for the specified locale
-  function loadLocale(lang, callback) {
-    /*jshint newcap: false */
-    clear();
-
-    // check all <link type="application/l10n" href="..." /> nodes
-    // and load the resource files
-    var langLinks = gQuerySelectorAll('link[type="application/l10n"]');
-    var langCount = langLinks.length;
-
-    // start the callback when all resources are loaded
-    var onResourceLoaded = null;
-    var gResourceCount = 0;
-    onResourceLoaded = function() {
-      gResourceCount++;
-      if (gResourceCount >= langCount) {
-        // execute the [optional] callback
-        if (callback) {
-          callback();
-        }
-
-        // fire a 'localized' DOM event
-        if (document.createEvent) {
-          var evtObject = document.createEvent('Event');
-          evtObject.initEvent('localized', false, false);
-          evtObject.language = lang;
-          window.dispatchEvent(evtObject);
-        } else if (document.createEventObject) { // oldIE
-          // Hack to simulate a custom event in IE
-          // To catch this event, add an event hendler to "onpropertychange"
-          document.documentElement.localized = 1;
-        }
-      }
-    };
-
-    // load all resource files
-    function l10nResourceLink(link) {
-      /*jshint validthis: true*/
-      var href = link.href;
-      var type = link.type;
-      this.load = function(lang, callback) {
-        var applied = lang;
-        parseResource(href, lang, callback, function() {
-          console.warn(href + ' not found.');
-          applied = '';
-        });
-        return applied; // return lang if found, an empty string if not found
-      };
-    }
-
-    gLanguage = lang;
-    for (var i = 0; i < langCount; i++) {
-      var resource = new l10nResourceLink(langLinks[i]);
-      var rv = resource.load(lang, onResourceLoaded);
-      if (rv != lang) // lang not found, used default resource instead
-        gLanguage = '';
-    }
-  }
 
   // fetch an l10n object, warn if not found, apply `args' if possible
   function getL10nData(key, args) {
@@ -786,66 +776,32 @@ document.webL10n = (function(window, document, undefined) {
     return str;
   }
 
-  /**
-   * Create the dataset property on browsers that don't support it
-   *
-   * @param {DOMElement} element
-   *
-   * @return void
-   */
-  function getDataset(element) {
-    var dataset = {},
-        datas = 0,
-        attr,
-        attrObj,
-        dataKey;
-    function camelize(e) {
-      return e.substr(1).toUpperCase();
-    }
-    for (attr in element.attributes) {
-      attrObj = element.attributes[attr];
-      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' &&
-          /^data-/.test(attrObj.name)) {
-        dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
-        dataset[dataKey] = attrObj.value;
-        datas++;
-      }
-    }
-    if (datas > 0) {
-      element.dataset = dataset;
-    }
-
-  }
   // translate an HTML element
   function translateElement(element) {
-    if (!element.dataset) {
-      getDataset(element);
-    }
-    if (!element || !element.dataset)
+    var l10n = getL10nAttributes(element);
+    if (!l10n.id)
       return;
 
     // get arguments (if any)
     // TODO: more flexible parser?
     var args;
-    if (element.dataset.l10nArgs) try {
-      args = JSON.parse(element.dataset.l10nArgs);
+    if (l10n.args) try {
+      args = JSON.parse(l10n.args);
     } catch (e) {
-      console.warn('[l10n] could not parse arguments for #' + key + '');
+      console.warn('[l10n] could not parse arguments for #' + l10n.id + '');
     }
 
     // get the related l10n object
-    var key = element.dataset.l10nId;
-    var data = getL10nData(key, args);
+    var data = getL10nData(l10n.id, args);
     if (!data) {
-      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
+      console.warn('[l10n] #' + l10n.id + ' missing for [' + gLanguage + ']');
       return;
     }
 
-    // translate element
-    // For the node content, replace the content of the first child textNode
+    // translate element (TODO: security checks?)
+    // for the node content, replace the content of the first child textNode
     // and clear other child textNodes
-    // TODO: security check?
-    if (data[gTextProp]) {
+    if (data[gTextProp]) { // XXX oldIE hacks
       if (element.children.length === 0) {
         element[gTextProp] = data[gTextProp];
       } else {
@@ -853,11 +809,11 @@ document.webL10n = (function(window, document, undefined) {
             found = false;
         for (var i = 0, l = children.length; i < l; i++) {
           if (children[i].nodeType === 3 &&
-              /\S/.test(children[i].textContent)) {
+              /\S/.test(children[i].textContent)) { // XXX
+            // using nodeValue seems cross-browser
             if (found) {
               children[i].nodeValue = '';
             } else {
-              // Using nodeValue seems cross-browser
               children[i].nodeValue = data[gTextProp];
               found = true;
             }
@@ -876,20 +832,16 @@ document.webL10n = (function(window, document, undefined) {
 
   // translate an HTML subtree
   function translateFragment(element) {
-    element = element || gQuerySelectorAll('html')[0];
+    element = element || document.documentElement;
 
     // check all translatable children (= w/ a `data-l10n-id' attribute)
-    var children = gQuerySelectorAll('*[data-l10n-id]', element);
+    var children = getTranslatableChildren(element);
     var elementCount = children.length;
     for (var i = 0; i < elementCount; i++)
       translateElement(children[i]);
 
     // translate element itself if necessary
-    if (!element.dataset) {
-      getDataset(element);
-    }
-    if (element.dataset && element.dataset.l10nId)
-      translateElement(element);
+    translateElement(element);
   }
 
   // clear all l10n data
@@ -900,21 +852,57 @@ document.webL10n = (function(window, document, undefined) {
     gMacros = {};
   }
 
-  // load the default locale on startup
-  function startup() { // hacks for oldIE
-    // Init for cross-browser compatibility
-    gQuerySelectorAll = getQSA();
+
+  /**
+   * Startup & Public API
+   */
+
+  if (document.addEventListener) { // modern browsers and IE9+
+    document.addEventListener('DOMContentLoaded', function() {
+      var lang = document.documentElement.lang || navigator.language;
+      loadLocale(lang, translateFragment);
+    }, false);
+  } else if (window.attachEvent) { // IE8 and before (oldIE)
     gTextProp = document.body.textContent ? 'textContent' : 'innerText';
-    var lang = window.navigator.userLanguage || navigator.language;
-    loadLocale(lang, translateFragment);
-  }
-  if (document.addEventListener) { // IE9+
-    document.addEventListener('DOMContentLoaded', startup);
-  } else { // IE8 and before (oldIE)
-    window.attachEvent('onload', startup);
+    if (!console) {
+      var console = {
+        log: function(msg) {},
+        warn: function(msg) { alert(msg); }
+      };
+    }
+    if (!document.querySelectorAll) {
+      getTranslatableChildren = function(element) {
+        if (!element)
+          return [];
+        var qsa = window.Sizzle || window.qwery;
+        if (qsa)
+          return qsa('*[data-l10n-id]', element);
+        console.warn('[l10n] no "querySelectorAll" method available');
+        return [];
+      };
+      getL10nResourceLinks = function() {
+        var links = document.getElementsByName('link'),
+            l10nLinks = [];
+        for (var i = 0; i < links.length; i++) {
+          if (links[i].type == 'application/l10n')
+            l10nLinks.push(links[i]);
+        }
+        return l10nLinks;
+      };
+    }
+    if (document.createEventObject && !document.createEvent) {
+      fireL10nReadyEvent = function(lang) {
+        // Hack to simulate a custom event in IE:
+        // to catch this event, add an event hendler to "onpropertychange".
+        document.documentElement.localized = 1;
+      };
+    }
+    window.attachEvent('onload', function() {
+      var lang = document.documentElement.lang || window.navigator.userLanguage;
+      loadLocale(lang, translateFragment);
+    });
   }
 
-  // Public API
   return {
     // get a localized string
     get: function(key, args, fallback) {
@@ -926,21 +914,16 @@ document.webL10n = (function(window, document, undefined) {
     getData: function() { return gL10nData; },
     getText: function() { return gTextData; },
 
-    // get|set the document language and direction
-    getLanguage: function() {
-      return {
-        // get|set the document language (ISO-639-1)
-        getCode: function() { return gLanguage; },
-        setCode: function(lang) { loadLocale(lang, translateFragment); },
+    // get|set the document language
+    getLanguageCode: function() { return gLanguage; },
+    setLanguageCode: function(lang) { loadLocale(lang, translateFragment); },
 
-        // get the direction (ltr|rtl) of the current language
-        getDirection: function() {
-          // http://www.w3.org/International/questions/qa-scripts
-          // Arabic, Hebrew, Farsi, Pashto, Urdu
-          var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
-          return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
-        }
-      };
+    // get the direction (ltr|rtl) of the current language
+    getLanguageDirection: function() {
+      // http://www.w3.org/International/questions/qa-scripts
+      // Arabic, Hebrew, Farsi, Pashto, Urdu
+      var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
+      return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
     }
   };
 })(window, document);
