@@ -13,25 +13,23 @@
   -->
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
-   (function () {
-     var onLocalized = function() {
-       var l10n = document.webL10n,
-           textProp = document.body.textContent ? 'textContent' : 'innerText';
-       document.getElementsByTagName('select')[0].value = l10n.getLanguage().getCode();
-       document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] = l10n.getText();
-       document.getElementById('json').getElementsByTagName('textarea')[0][textProp] = JSON.stringify(l10n.getData(), undefined, 2);
-     };
-     if (document.addEventListener) {
-       window.addEventListener('localized', onLocalized, false);
-     } else {
-       document.documentElement.localized = 0;
-       document.documentElement.attachEvent("onpropertychange", function (e) {
-         if (e.propertyName === 'localized') {
-           onLocalized();
-         }
-       });
-     }
-   })();
+    function onLocalized () {
+      var l10n = document.webL10n,
+          textProp = document.body.textContent ? 'textContent' : 'innerText';
+      document.getElementsByTagName('select')[0].value = l10n.getLanguageCode();
+      document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] = l10n.getText();
+      document.getElementById('json').getElementsByTagName('textarea')[0][textProp] = JSON.stringify(l10n.getData(), undefined, 2);
+    };
+    if (document.addEventListener) {
+      window.addEventListener('localized', onLocalized, false);
+    } else {
+      document.documentElement.localized = 0;
+      document.documentElement.attachEvent("onpropertychange", function (e) {
+        if (e.propertyName === 'localized') {
+          onLocalized();
+        }
+      });
+    }
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
@@ -80,7 +78,7 @@
       </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.webL10n.getLanguage().setCode(this.value || this.options[this.selectedIndex].text);">
+        <select onchange="document.webL10n.setLanguageCode(this.value || this.options[this.selectedIndex].text);">
           <option disabled selected> </option>
           <option>en</option>
           <option>fr</option>
