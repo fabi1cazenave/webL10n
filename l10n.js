@@ -855,6 +855,11 @@ document.webL10n = (function(window, document, undefined) {
 
   /**
    * Startup & Public API
+   *
+   * Warning: this part of the code contains browser-specific chunks --
+   * that's where obsolete browsers, namely IE8 and earlier, are handled.
+   *
+   * Unlike the rest of the lib, this section is not shared with B2G/Gaia.
    */
 
   if (document.addEventListener) { // modern browsers and IE9+

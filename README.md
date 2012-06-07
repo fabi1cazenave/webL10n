@@ -51,9 +51,9 @@ window.addEventListener('localized', function showBody() {
 }, false);
 ```
 * `localized` event: fired when the page has been translated;
-* `language` property (read-only): language of the current document
-    * `language.code` (read/write): ISO-639-1 code of the current language
-    * `language.dir` (read-only): direction (ltr|rtl) of the current language.
+* `getLangageCode`: get the ISO-639-1 code of the current locale;
+* `setLangageCode`: set the ISO-639-1 code of the current locale;
+* `getLanguageDirection`: direction (ltr|rtl) of the current language.
 * `get` method: get a translated string.
 
 ```javascript
