@@ -26,13 +26,168 @@ document.webL10n = (function(window, document, undefined) {
       gTextData = '',
       gLanguage = '',
       gMacros = {},
-      gTextProp,
-      gQuerySelectorAll;
+      gTextProp,         // `textContent' (standard) or `innerText' (oldIE)
+      gQuerySelectorAll; // `querySelectorAll' (standard) or shim (oldIE)
 
   /**
-   * Get a QuerySelectorAll function
+   * l10n resource parser:
+   *  - reads (async XHR) the l10n resource matching `lang';
+   *  - imports linked resources (synchronously) when specified;
+   *  - parses the text data (fills `gL10nData' and `gTextData');
+   *  - triggers success/failure callbacks when done.
    *
-   * If document.querySelectorAll is not available, try to use Qwery or Sizzle
+   * @param {string} href
+   *    URL of the l10n resource to parse.
+   *
+   * @param {string} lang
+   *    locale (language) to parse.
+   *
+   * @param {Function} successCallback
+   *    triggered when the l10n resource has been successully parsed.
+   *
+   * @param {Function} failureCallback
+   *    triggered when the an error has occured.
+   *
+   * @return {void}
+   *    uses the following global variables: gL10nData, gTextData, gTextProp.
+   */
+
+  function parseResource(href, lang, successCallback, failureCallback) {
+    var baseURL = (href.substr(0, 4) === 'http') ?
+      href.replace(/\/[^\/]*$/, '/') : '';
+
+    // handle escaped characters (backslashes) in a string
+    function evalString(text) {
+      if (text.lastIndexOf('\\') < 0)
+        return text;
+      return text.replace(/\\\\/g, '\\')
+                 .replace(/\\n/g, '\n')
+                 .replace(/\\r/g, '\r')
+                 .replace(/\\t/g, '\t')
+                 .replace(/\\b/g, '\b')
+                 .replace(/\\f/g, '\f')
+                 .replace(/\\{/g, '{')
+                 .replace(/\\}/g, '}')
+                 .replace(/\\"/g, '"')
+                 .replace(/\\'/g, "'");
+    }
+
+    // parse *.properties text data into an l10n dictionary
+    function parseProperties(text) {
+      var dictionary = [];
+
+      // token expressions
+      var reBlank = /^\s*|\s*$/;
+      var reComment = /^\s*#|^\s*$/;
+      var reSection = /^\s*\[(.*)\]\s*$/;
+      var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
+      var reSplit = /\s*=\s*/; // TODO: support backslashes to escape EOLs
+
+      // parse the *.properties file into an associative array
+      function parseRawLines(rawText, extendedSyntax) {
+        var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
+        var currentLang = '*';
+        var genericLang = lang.replace(/-[a-z]+$/i, '');
+        var skipLang = false;
+        var match = '';
+
+        for (var i = 0; i < entries.length; i++) {
+          var line = entries[i];
+
+          // comment or blank line?
+          if (reComment.test(line))
+            continue;
+
+          // the extended syntax supports [lang] sections and @import rules
+          if (extendedSyntax) {
+            if (reSection.test(line)) { // section start?
+              match = reSection.exec(line);
+              currentLang = match[1];
+              skipLang = (currentLang != '*') &&
+                (currentLang != lang) && (currentLang != genericLang);
+              continue;
+            } else if (skipLang) {
+              continue;
+            }
+            if (reImport.test(line)) { // @import rule?
+              match = reImport.exec(line);
+              loadImport(baseURL + match[1]); // load the resource synchronously
+            }
+          }
+
+          // key-value pair
+          var tmp = line.split(reSplit);
+          if (tmp.length > 1)
+            dictionary[tmp[0]] = evalString(tmp[1]);
+        }
+      }
+
+      // import another *.properties file
+      function loadImport(url) {
+        loadResource(url, function(content) {
+          parseRawLines(content, false); // don't allow recursive imports
+        }, false, false); // load synchronously
+      }
+
+      // fill the dictionary
+      parseRawLines(text, true);
+      return dictionary;
+    }
+
+    // load the specified resource file
+    function loadResource(url, onSuccess, onFailure, asynchronous) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, asynchronous);
+      if (xhr.overrideMimeType) {
+        xhr.overrideMimeType('text/plain; charset=utf-8');
+      }
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          if (xhr.status == 200 || xhr.status === 0) {
+            if (onSuccess)
+              onSuccess(xhr.responseText);
+          } else {
+            if (onFailure)
+              onFailure();
+          }
+        }
+      };
+      xhr.send(null);
+    }
+
+    // load and parse l10n data (warning: global variables are used here)
+    loadResource(href, function(response) {
+      gTextData += response; // mostly for debug
+
+      // parse *.properties text data into an l10n dictionary
+      var data = parseProperties(response);
+
+      // find attribute descriptions, if any
+      for (var key in data) {
+        var id, prop, index = key.lastIndexOf('.');
+        if (index > 0) { // an attribute has been specified
+          id = key.substring(0, index);
+          prop = key.substr(index + 1);
+        } else { // no attribute: assuming text content by default
+          id = key;
+          prop = gTextProp;
+        }
+        if (!gL10nData[id]) {
+          gL10nData[id] = {};
+        }
+        gL10nData[id][prop] = data[key];
+      }
+
+      // trigger callback
+      if (successCallback)
+        successCallback();
+    }, failureCallback, true);
+  };
+
+  /**
+   * Get a QuerySelectorAll function (oldIE)
+   *
+   * If document.querySelectorAll is not available, try to use Qwery or Sizzle.
    *
    * @return {Function}
    */
@@ -89,136 +244,6 @@ document.webL10n = (function(window, document, undefined) {
     return str;
   };
 
-  // parser
-
-  function evalString(text) {
-    if (text.lastIndexOf('\\') < 0)
-      return text;
-    return text.replace(/\\\\/g, '\\')
-               .replace(/\\n/g, '\n')
-               .replace(/\\r/g, '\r')
-               .replace(/\\t/g, '\t')
-               .replace(/\\b/g, '\b')
-               .replace(/\\f/g, '\f')
-               .replace(/\\{/g, '{')
-               .replace(/\\}/g, '}')
-               .replace(/\\"/g, '"')
-               .replace(/\\'/g, "'");
-  }
-
-  function parseProperties(text, lang, baseURL) {
-    var data = [];
-
-    // token expressions
-    var reBlank = /^\s*|\s*$/;
-    var reComment = /^\s*#|^\s*$/;
-    var reSection = /^\s*\[(.*)\]\s*$/;
-    var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
-    var reSplit = /\s*=\s*/; // TODO: support backslashes to escape EOLs
-
-    // parse the *.properties file into an associative array
-    function parseRawLines(rawText, extendedSyntax) {
-      var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
-      var currentLang = '*';
-      var genericLang = lang.replace(/-[a-z]+$/i, '');
-      var skipLang = false;
-      var match = '';
-
-      for (var i = 0; i < entries.length; i++) {
-        var line = entries[i];
-
-        // comment or blank line?
-        if (reComment.test(line))
-          continue;
-
-        // the extended syntax supports [lang] sections and @import rules
-        if (extendedSyntax) {
-          if (reSection.test(line)) { // section start?
-            match = reSection.exec(line);
-            currentLang = match[1];
-            skipLang = (currentLang != lang) && (currentLang != genericLang) &&
-              (currentLang != '*');
-            continue;
-          } else if (skipLang) {
-            continue;
-          }
-          if (reImport.test(line)) { // @import rule?
-            match = reImport.exec(line);
-            loadImport(baseURL + match[1]); // load the resource synchronously
-          }
-        }
-
-        // key-value pair
-        var tmp = line.split(reSplit);
-        if (tmp.length > 1)
-          data[tmp[0]] = evalString(tmp[1]);
-      }
-    }
-
-    // import another *.properties file
-    function loadImport(href) {
-      loadResource(href, function(content) {
-        parseRawLines(content, false); // don't allow recursive imports
-      }, false, false); // load synchronously
-    }
-
-    parseRawLines(text, true);
-
-    // find the attribute descriptions, if any
-    for (var key in data) {
-      var id, prop, index = key.lastIndexOf('.');
-      if (index > 0) { // an attribute has been specified
-        id = key.substring(0, index);
-        prop = key.substr(index + 1);
-      } else {     // no attribute: assuming node content by default
-        id = key;
-        prop = gTextProp;
-      }
-      if (!gL10nData[id]) {
-        gL10nData[id] = {};
-      }
-      gL10nData[id][prop] = data[key];
-    }
-  }
-
-  function parse(text, lang, baseURL) {
-    gTextData += text;
-    // we only support *.properties files at the moment
-    return parseProperties(text, lang, baseURL);
-  }
-
-  // load the specified resource file
-  function loadResource(href, onSuccess, onFailure, asynchronous) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', href, asynchronous);
-    if (xhr.overrideMimeType) {
-      xhr.overrideMimeType('text/plain; charset=utf-8');
-    }
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState == 4) {
-        if (xhr.status == 200 || xhr.status === 0) {
-          if (onSuccess)
-            onSuccess(xhr.responseText);
-        } else {
-          if (onFailure)
-            onFailure();
-        }
-      }
-    };
-    xhr.send(null);
-  }
-
-  // load and parse the specified resource file
-  function loadAndParse(href, lang, onSuccess, onFailure) {
-    var baseURL = (href.substr(0, 4) === 'http') ?
-      href.replace(/\/[^\/]*$/, '/') : '';
-    loadResource(href, function(response) {
-      parse(response, lang, baseURL);
-      if (onSuccess)
-        onSuccess();
-    }, onFailure, true);
-  }
-
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
     /*jshint newcap: false */
@@ -246,7 +271,7 @@ document.webL10n = (function(window, document, undefined) {
           evtObject.initEvent('localized', false, false);
           evtObject.language = lang;
           window.dispatchEvent(evtObject);
-        } else if (document.createEventObject) {
+        } else if (document.createEventObject) { // oldIE
           // Hack to simulate a custom event in IE
           // To catch this event, add an event hendler to "onpropertychange"
           document.documentElement.localized = 1;
@@ -261,7 +286,7 @@ document.webL10n = (function(window, document, undefined) {
       var type = link.type;
       this.load = function(lang, callback) {
         var applied = lang;
-        loadAndParse(href, lang, callback, function() {
+        parseResource(href, lang, callback, function() {
           console.warn(href + ' not found.');
           applied = '';
         });
@@ -870,7 +895,7 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // load the default locale on startup
-  function startup() {
+  function startup() { // hacks for oldIE
     // Init for cross-browser compatibility
     gQuerySelectorAll = getQSA();
     gTextProp = document.body.textContent ? 'textContent' : 'innerText';
@@ -879,7 +904,7 @@ document.webL10n = (function(window, document, undefined) {
   }
   if (document.addEventListener) { // IE9+
     document.addEventListener('DOMContentLoaded', startup);
-  } else { // IE8 and before
+  } else { // IE8 and before (oldIE)
     window.attachEvent('onload', startup);
   }
 
