@@ -185,314 +185,20 @@ document.webL10n = (function(window, document, undefined) {
   };
 
   /**
-   * Get a QuerySelectorAll function (oldIE)
+   * Get rules for plural forms (shared with JetPack), see:
+   *  - http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html
+   *  - https://github.com/mozilla/addon-sdk/blob/master/python-lib/plural-rules-generator.py
    *
-   * If document.querySelectorAll is not available, try to use Qwery or Sizzle.
+   * @param {string} lang
+   *    locale (language) used.
    *
    * @return {Function}
+   *    returns a function that gives the plural form name for a given integer:
+   *       var fun = getPluralRules('en');
+   *       fun(1)    -> 'one'
+   *       fun(0)    -> 'other'
+   *       fun(1000) -> 'other'.
    */
-  function getQSA() {
-    if (document.querySelectorAll) {
-      return function(selector, element) {
-        return element ? element.querySelectorAll(selector) :
-                        document.querySelectorAll(selector);
-      };
-    } else if (window.Sizzle) {
-      return function(selector, element) {
-        return element ? window.Sizzle(selector, element) :
-                         window.Sizzle(selector);
-      };
-    } else if (window.qwery) {
-      return function(selector, element) {
-        return element ? window.qwery(selector, element) :
-                         window.qwery(selector);
-      };
-    } else {
-      console.warn('[l10n] no QuerySelector method available');
-      return function(selector, element) {
-        return [];
-      };
-    }
-  }
-
-  // pre-defined macros
-  gMacros.plural = function(str, param, key, prop) {
-    var n = parseFloat(param);
-    if (isNaN(n))
-      return str;
-
-    // TODO: support other properties (l20n still doesn't...)
-    if (prop != gTextProp)
-      return str;
-
-    // initialize _pluralRules
-    if (!gMacros._pluralRules)
-      gMacros._pluralRules = getPluralRules(gLanguage);
-    var index = '[' + gMacros._pluralRules(n) + ']';
-
-    // try to find a [zero|one|two] key if it's defined
-    if (n === 0 && (key + '[zero]') in gL10nData) {
-      str = gL10nData[key + '[zero]'][prop];
-    } else if (n == 1 && (key + '[one]') in gL10nData) {
-      str = gL10nData[key + '[one]'][prop];
-    } else if (n == 2 && (key + '[two]') in gL10nData) {
-      str = gL10nData[key + '[two]'][prop];
-    } else if ((key + index) in gL10nData) {
-      str = gL10nData[key + index][prop];
-    }
-
-    return str;
-  };
-
-  // load and parse all resources for the specified locale
-  function loadLocale(lang, callback) {
-    /*jshint newcap: false */
-    clear();
-
-    // check all <link type="application/l10n" href="..." /> nodes
-    // and load the resource files
-    var langLinks = gQuerySelectorAll('link[type="application/l10n"]');
-    var langCount = langLinks.length;
-
-    // start the callback when all resources are loaded
-    var onResourceLoaded = null;
-    var gResourceCount = 0;
-    onResourceLoaded = function() {
-      gResourceCount++;
-      if (gResourceCount >= langCount) {
-        // execute the [optional] callback
-        if (callback) {
-          callback();
-        }
-
-        // fire a 'localized' DOM event
-        if (document.createEvent) {
-          var evtObject = document.createEvent('Event');
-          evtObject.initEvent('localized', false, false);
-          evtObject.language = lang;
-          window.dispatchEvent(evtObject);
-        } else if (document.createEventObject) { // oldIE
-          // Hack to simulate a custom event in IE
-          // To catch this event, add an event hendler to "onpropertychange"
-          document.documentElement.localized = 1;
-        }
-      }
-    };
-
-    // load all resource files
-    function l10nResourceLink(link) {
-      /*jshint validthis: true*/
-      var href = link.href;
-      var type = link.type;
-      this.load = function(lang, callback) {
-        var applied = lang;
-        parseResource(href, lang, callback, function() {
-          console.warn(href + ' not found.');
-          applied = '';
-        });
-        return applied; // return lang if found, an empty string if not found
-      };
-    }
-
-    gLanguage = lang;
-    for (var i = 0; i < langCount; i++) {
-      var resource = new l10nResourceLink(langLinks[i]);
-      var rv = resource.load(lang, onResourceLoaded);
-      if (rv != lang) // lang not found, used default resource instead
-        gLanguage = '';
-    }
-  }
-
-  // fetch an l10n object, warn if not found, apply `args' if possible
-  function getL10nData(key, args) {
-    var data = gL10nData[key];
-    if (!data)
-      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
-
-    /** This is where l10n expressions should be processed.
-      * The plan is to support C-style expressions from the l20n project;
-      * until then, only two kinds of simple expressions are supported:
-      *   {[ index ]} and {{ arguments }}.
-      */
-    var rv = {};
-    for (var prop in data) {
-      var str = data[prop];
-      str = substIndexes(str, args, key, prop);
-      str = substArguments(str, args);
-      rv[prop] = str;
-    }
-    return rv;
-  }
-
-  // replace {[macros]} with their values
-  function substIndexes(str, args, key, prop) {
-    var reIndex = /\{\[\s*([a-zA-Z]+)\(([a-zA-Z]+)\)\s*\]\}/;
-    var reMatch = reIndex.exec(str);
-    if (!reMatch || !reMatch.length)
-      return str;
-
-    // an index/macro has been found
-    // Note: at the moment, only one parameter is supported
-    var macroName = reMatch[1];
-    var paramName = reMatch[2];
-    var param;
-    if (args && paramName in args) {
-      param = args[paramName];
-    } else if (paramName in gL10nData) {
-      param = gL10nData[paramName];
-    }
-
-    // there's no macro parser yet: it has to be defined in gMacros
-    if (macroName in gMacros) {
-      var macro = gMacros[macroName];
-      str = macro(str, param, key, prop);
-    }
-    return str;
-  }
-
-  // replace {{arguments}} with their values
-  function substArguments(str, args) {
-    var reArgs = /\{\{\s*([a-zA-Z\.]+)\s*\}\}/;
-    var match = reArgs.exec(str);
-    while (match) {
-      if (!match || match.length < 2)
-        return str; // argument key not found
-
-      var arg = match[1];
-      var sub = '';
-      if (arg in args) {
-        sub = args[arg];
-      } else if (arg in gL10nData) {
-        sub = gL10nData[arg][gTextProp];
-      } else {
-        console.warn('[l10n] could not find argument {{' + arg + '}}');
-        return str;
-      }
-
-      str = str.substring(0, match.index) + sub +
-            str.substr(match.index + match[0].length);
-      match = reArgs.exec(str);
-    }
-    return str;
-  }
-
-  /**
-   * Create the dataset property on browsers that don't support it
-   *
-   * @param {DOMElement} element
-   *
-   * @return void
-   */
-  function getDataset(element) {
-    var dataset = {},
-        datas = 0,
-        attr,
-        attrObj,
-        dataKey;
-    function camelize(e) {
-      return e.substr(1).toUpperCase();
-    }
-    for (attr in element.attributes) {
-      attrObj = element.attributes[attr];
-      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' &&
-          /^data-/.test(attrObj.name)) {
-        dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
-        dataset[dataKey] = attrObj.value;
-        datas++;
-      }
-    }
-    if (datas > 0) {
-      element.dataset = dataset;
-    }
-
-  }
-  // translate an HTML element
-  function translateElement(element) {
-    if (!element.dataset) {
-      getDataset(element);
-    }
-    if (!element || !element.dataset)
-      return;
-
-    // get arguments (if any)
-    // TODO: more flexible parser?
-    var args;
-    if (element.dataset.l10nArgs) try {
-      args = JSON.parse(element.dataset.l10nArgs);
-    } catch (e) {
-      console.warn('[l10n] could not parse arguments for #' + key + '');
-    }
-
-    // get the related l10n object
-    var key = element.dataset.l10nId;
-    var data = getL10nData(key, args);
-    if (!data) {
-      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
-      return;
-    }
-
-    // translate element
-    // For the node content, replace the content of the first child textNode
-    // and clear other child textNodes
-    // TODO: security check?
-    if (data[gTextProp]) {
-      if (element.children.length === 0) {
-        element[gTextProp] = data[gTextProp];
-      } else {
-        var children = element.childNodes,
-            found = false;
-        for (var i = 0, l = children.length; i < l; i++) {
-          if (children[i].nodeType === 3 &&
-              /\S/.test(children[i].textContent)) {
-            if (found) {
-              children[i].nodeValue = '';
-            } else {
-              // Using nodeValue seems cross-browser
-              children[i].nodeValue = data[gTextProp];
-              found = true;
-            }
-          }
-        }
-        if (!found) {
-          console.log('WTF ?');
-        }
-      }
-      delete data[gTextProp];
-    }
-
-    for (var k in data)
-      element[k] = data[k];
-  }
-
-  // translate an HTML subtree
-  function translateFragment(element) {
-    element = element || gQuerySelectorAll('html')[0];
-
-    // check all translatable children (= w/ a `data-l10n-id' attribute)
-    var children = gQuerySelectorAll('*[data-l10n-id]', element);
-    var elementCount = children.length;
-    for (var i = 0; i < elementCount; i++)
-      translateElement(children[i]);
-
-    // translate element itself if necessary
-    if (!element.dataset) {
-      getDataset(element);
-    }
-    if (element.dataset && element.dataset.l10nId)
-      translateElement(element);
-  }
-
-  // clear all l10n data
-  function clear() {
-    gL10nData = {};
-    gTextData = '';
-    gLanguage = '';
-    gMacros = {};
-  }
-
-  // rules for plural forms (shared with JetPack)
-  // http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html
-  // https://github.com/mozilla/addon-sdk/blob/master/python-lib/plural-rules-generator.py
   function getPluralRules(lang) {
     var locales2rules = {
       'af': 3,
@@ -879,19 +585,319 @@ document.webL10n = (function(window, document, undefined) {
       }
     };
 
-    /** Return a function that gives the plural form name for a given integer
-      * for the specified `locale`
-      *   var fun = getPluralRules('en');
-      *   fun(1)    -> 'one'
-      *   fun(0)    -> 'other'
-      *   fun(1000) -> 'other'
-      */
+    // return a function that gives the plural form name for a given integer
     var index = locales2rules[lang.replace(/-.*$/, '')];
     if (!(index in pluralRules)) {
       console.warn('[l10n] plural form unknown for [' + lang + ']');
       return function() { return 'other'; };
     }
     return pluralRules[index];
+  }
+
+  // pre-defined macros
+  gMacros.plural = function(str, param, key, prop) {
+    var n = parseFloat(param);
+    if (isNaN(n))
+      return str;
+
+    // TODO: support other properties (l20n still doesn't...)
+    if (prop != gTextProp)
+      return str;
+
+    // initialize _pluralRules
+    if (!gMacros._pluralRules)
+      gMacros._pluralRules = getPluralRules(gLanguage);
+    var index = '[' + gMacros._pluralRules(n) + ']';
+
+    // try to find a [zero|one|two] key if it's defined
+    if (n === 0 && (key + '[zero]') in gL10nData) {
+      str = gL10nData[key + '[zero]'][prop];
+    } else if (n == 1 && (key + '[one]') in gL10nData) {
+      str = gL10nData[key + '[one]'][prop];
+    } else if (n == 2 && (key + '[two]') in gL10nData) {
+      str = gL10nData[key + '[two]'][prop];
+    } else if ((key + index) in gL10nData) {
+      str = gL10nData[key + index][prop];
+    }
+
+    return str;
+  };
+
+  /**
+   * Get a QuerySelectorAll function (oldIE)
+   *
+   * If document.querySelectorAll is not available, try to use Qwery or Sizzle.
+   *
+   * @return {Function}
+   */
+  function getQSA() {
+    if (document.querySelectorAll) {
+      return function(selector, element) {
+        return element ? element.querySelectorAll(selector) :
+                        document.querySelectorAll(selector);
+      };
+    } else if (window.Sizzle) {
+      return function(selector, element) {
+        return element ? window.Sizzle(selector, element) :
+                         window.Sizzle(selector);
+      };
+    } else if (window.qwery) {
+      return function(selector, element) {
+        return element ? window.qwery(selector, element) :
+                         window.qwery(selector);
+      };
+    } else {
+      console.warn('[l10n] no QuerySelector method available');
+      return function(selector, element) {
+        return [];
+      };
+    }
+  }
+
+  // load and parse all resources for the specified locale
+  function loadLocale(lang, callback) {
+    /*jshint newcap: false */
+    clear();
+
+    // check all <link type="application/l10n" href="..." /> nodes
+    // and load the resource files
+    var langLinks = gQuerySelectorAll('link[type="application/l10n"]');
+    var langCount = langLinks.length;
+
+    // start the callback when all resources are loaded
+    var onResourceLoaded = null;
+    var gResourceCount = 0;
+    onResourceLoaded = function() {
+      gResourceCount++;
+      if (gResourceCount >= langCount) {
+        // execute the [optional] callback
+        if (callback) {
+          callback();
+        }
+
+        // fire a 'localized' DOM event
+        if (document.createEvent) {
+          var evtObject = document.createEvent('Event');
+          evtObject.initEvent('localized', false, false);
+          evtObject.language = lang;
+          window.dispatchEvent(evtObject);
+        } else if (document.createEventObject) { // oldIE
+          // Hack to simulate a custom event in IE
+          // To catch this event, add an event hendler to "onpropertychange"
+          document.documentElement.localized = 1;
+        }
+      }
+    };
+
+    // load all resource files
+    function l10nResourceLink(link) {
+      /*jshint validthis: true*/
+      var href = link.href;
+      var type = link.type;
+      this.load = function(lang, callback) {
+        var applied = lang;
+        parseResource(href, lang, callback, function() {
+          console.warn(href + ' not found.');
+          applied = '';
+        });
+        return applied; // return lang if found, an empty string if not found
+      };
+    }
+
+    gLanguage = lang;
+    for (var i = 0; i < langCount; i++) {
+      var resource = new l10nResourceLink(langLinks[i]);
+      var rv = resource.load(lang, onResourceLoaded);
+      if (rv != lang) // lang not found, used default resource instead
+        gLanguage = '';
+    }
+  }
+
+  // fetch an l10n object, warn if not found, apply `args' if possible
+  function getL10nData(key, args) {
+    var data = gL10nData[key];
+    if (!data)
+      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
+
+    /** This is where l10n expressions should be processed.
+      * The plan is to support C-style expressions from the l20n project;
+      * until then, only two kinds of simple expressions are supported:
+      *   {[ index ]} and {{ arguments }}.
+      */
+    var rv = {};
+    for (var prop in data) {
+      var str = data[prop];
+      str = substIndexes(str, args, key, prop);
+      str = substArguments(str, args);
+      rv[prop] = str;
+    }
+    return rv;
+  }
+
+  // replace {[macros]} with their values
+  function substIndexes(str, args, key, prop) {
+    var reIndex = /\{\[\s*([a-zA-Z]+)\(([a-zA-Z]+)\)\s*\]\}/;
+    var reMatch = reIndex.exec(str);
+    if (!reMatch || !reMatch.length)
+      return str;
+
+    // an index/macro has been found
+    // Note: at the moment, only one parameter is supported
+    var macroName = reMatch[1];
+    var paramName = reMatch[2];
+    var param;
+    if (args && paramName in args) {
+      param = args[paramName];
+    } else if (paramName in gL10nData) {
+      param = gL10nData[paramName];
+    }
+
+    // there's no macro parser yet: it has to be defined in gMacros
+    if (macroName in gMacros) {
+      var macro = gMacros[macroName];
+      str = macro(str, param, key, prop);
+    }
+    return str;
+  }
+
+  // replace {{arguments}} with their values
+  function substArguments(str, args) {
+    var reArgs = /\{\{\s*([a-zA-Z\.]+)\s*\}\}/;
+    var match = reArgs.exec(str);
+    while (match) {
+      if (!match || match.length < 2)
+        return str; // argument key not found
+
+      var arg = match[1];
+      var sub = '';
+      if (arg in args) {
+        sub = args[arg];
+      } else if (arg in gL10nData) {
+        sub = gL10nData[arg][gTextProp];
+      } else {
+        console.warn('[l10n] could not find argument {{' + arg + '}}');
+        return str;
+      }
+
+      str = str.substring(0, match.index) + sub +
+            str.substr(match.index + match[0].length);
+      match = reArgs.exec(str);
+    }
+    return str;
+  }
+
+  /**
+   * Create the dataset property on browsers that don't support it
+   *
+   * @param {DOMElement} element
+   *
+   * @return void
+   */
+  function getDataset(element) {
+    var dataset = {},
+        datas = 0,
+        attr,
+        attrObj,
+        dataKey;
+    function camelize(e) {
+      return e.substr(1).toUpperCase();
+    }
+    for (attr in element.attributes) {
+      attrObj = element.attributes[attr];
+      if (typeof(attrObj) === 'object' && typeof(attrObj.name) === 'string' &&
+          /^data-/.test(attrObj.name)) {
+        dataKey = attrObj.name.substr(5).replace(/-[a-z]/g, camelize);
+        dataset[dataKey] = attrObj.value;
+        datas++;
+      }
+    }
+    if (datas > 0) {
+      element.dataset = dataset;
+    }
+
+  }
+  // translate an HTML element
+  function translateElement(element) {
+    if (!element.dataset) {
+      getDataset(element);
+    }
+    if (!element || !element.dataset)
+      return;
+
+    // get arguments (if any)
+    // TODO: more flexible parser?
+    var args;
+    if (element.dataset.l10nArgs) try {
+      args = JSON.parse(element.dataset.l10nArgs);
+    } catch (e) {
+      console.warn('[l10n] could not parse arguments for #' + key + '');
+    }
+
+    // get the related l10n object
+    var key = element.dataset.l10nId;
+    var data = getL10nData(key, args);
+    if (!data) {
+      console.warn('[l10n] #' + key + ' missing for [' + gLanguage + ']');
+      return;
+    }
+
+    // translate element
+    // For the node content, replace the content of the first child textNode
+    // and clear other child textNodes
+    // TODO: security check?
+    if (data[gTextProp]) {
+      if (element.children.length === 0) {
+        element[gTextProp] = data[gTextProp];
+      } else {
+        var children = element.childNodes,
+            found = false;
+        for (var i = 0, l = children.length; i < l; i++) {
+          if (children[i].nodeType === 3 &&
+              /\S/.test(children[i].textContent)) {
+            if (found) {
+              children[i].nodeValue = '';
+            } else {
+              // Using nodeValue seems cross-browser
+              children[i].nodeValue = data[gTextProp];
+              found = true;
+            }
+          }
+        }
+        if (!found) {
+          console.log('WTF ?');
+        }
+      }
+      delete data[gTextProp];
+    }
+
+    for (var k in data)
+      element[k] = data[k];
+  }
+
+  // translate an HTML subtree
+  function translateFragment(element) {
+    element = element || gQuerySelectorAll('html')[0];
+
+    // check all translatable children (= w/ a `data-l10n-id' attribute)
+    var children = gQuerySelectorAll('*[data-l10n-id]', element);
+    var elementCount = children.length;
+    for (var i = 0; i < elementCount; i++)
+      translateElement(children[i]);
+
+    // translate element itself if necessary
+    if (!element.dataset) {
+      getDataset(element);
+    }
+    if (element.dataset && element.dataset.l10nId)
+      translateElement(element);
+  }
+
+  // clear all l10n data
+  function clear() {
+    gL10nData = {};
+    gTextData = '';
+    gLanguage = '';
+    gMacros = {};
   }
 
   // load the default locale on startup
