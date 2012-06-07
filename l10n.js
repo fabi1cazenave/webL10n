@@ -1,4 +1,4 @@
-/*  Copyright (c) 2011-2012 Fabien Cazenave, Mozilla.
+/** Copyright (c) 2011-2012 Fabien Cazenave, Mozilla.
   *
   * Permission is hereby granted, free of charge, to any person obtaining a copy
   * of this software and associated documentation files (the "Software"), to
@@ -30,7 +30,10 @@ document.webL10n = (function(window, document, undefined) {
 
 
   /**
-   * helpers: "HTML API"
+   * DOM helpers for the so-called "HTML API".
+   *
+   * These functions are written for modern browsers. For old versions of IE,
+   * they're overridden in the 'startup' section at the end of this file.
    */
 
   function getL10nResourceLinks() {
@@ -255,6 +258,14 @@ document.webL10n = (function(window, document, undefined) {
       if (rv != lang) // lang not found, used default resource instead
         gLanguage = '';
     }
+  }
+
+  // clear all l10n data
+  function clear() {
+    gL10nData = {};
+    gTextData = '';
+    gLanguage = '';
+    gMacros = {};
   }
 
 
@@ -844,14 +855,6 @@ document.webL10n = (function(window, document, undefined) {
     translateElement(element);
   }
 
-  // clear all l10n data
-  function clear() {
-    gL10nData = {};
-    gTextData = '';
-    gLanguage = '';
-    gMacros = {};
-  }
-
 
   /**
    * Startup & Public API
@@ -862,6 +865,7 @@ document.webL10n = (function(window, document, undefined) {
    * Unlike the rest of the lib, this section is not shared with B2G/Gaia.
    */
 
+  // browser-specific startup
   if (document.addEventListener) { // modern browsers and IE9+
     document.addEventListener('DOMContentLoaded', function() {
       var lang = document.documentElement.lang || navigator.language;
@@ -908,6 +912,7 @@ document.webL10n = (function(window, document, undefined) {
     });
   }
 
+  // cross-browser API
   return {
     // get a localized string
     get: function(key, args, fallback) {
