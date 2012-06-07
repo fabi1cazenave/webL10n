@@ -868,7 +868,6 @@ document.webL10n = (function(window, document, undefined) {
       loadLocale(lang, translateFragment);
     }, false);
   } else if (window.attachEvent) { // IE8 and before (oldIE)
-    gTextProp = document.body.textContent ? 'textContent' : 'innerText';
     if (!console) {
       var console = {
         log: function(msg) {},
@@ -886,7 +885,7 @@ document.webL10n = (function(window, document, undefined) {
         return [];
       };
       getL10nResourceLinks = function() {
-        var links = document.getElementsByName('link'),
+        var links = document.getElementsByTagName('link'),
             l10nLinks = [];
         for (var i = 0; i < links.length; i++) {
           if (links[i].type == 'application/l10n')
@@ -903,6 +902,7 @@ document.webL10n = (function(window, document, undefined) {
       };
     }
     window.attachEvent('onload', function() {
+      gTextProp = document.body.textContent ? 'textContent' : 'innerText';
       var lang = document.documentElement.lang || window.navigator.userLanguage;
       loadLocale(lang, translateFragment);
     });
