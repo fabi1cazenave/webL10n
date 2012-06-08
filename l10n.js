@@ -45,10 +45,17 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   function getL10nAttributes(element) {
-    return element ? {
-      id: element.getAttribute('data-l10n-id'),
-      args: element.getAttribute('data-l10n-args')
-    } : {};
+    if (!element)
+      return {};
+    var l10nId = element.getAttribute('data-l10n-id'),
+        l10nArgs = element.getAttribute('data-l10n-args'),
+        args = {};
+    if (l10nArgs) try {
+      args = JSON.parse(l10nArgs);
+    } catch (e) {
+      console.warn('[l10n] could not parse arguments for #' + l10nId);
+    }
+    return { id: l10nId, args: args };
   }
 
   function fireL10nReadyEvent(lang) {
@@ -793,17 +800,8 @@ document.webL10n = (function(window, document, undefined) {
     if (!l10n.id)
       return;
 
-    // get arguments (if any)
-    // TODO: more flexible parser?
-    var args;
-    if (l10n.args) try {
-      args = JSON.parse(l10n.args);
-    } catch (e) {
-      console.warn('[l10n] could not parse arguments for #' + l10n.id + '');
-    }
-
     // get the related l10n object
-    var data = getL10nData(l10n.id, args);
+    var data = getL10nData(l10n.id, l10n.args);
     if (!data) {
       console.warn('[l10n] #' + l10n.id + ' missing for [' + gLanguage + ']');
       return;
@@ -874,18 +872,28 @@ document.webL10n = (function(window, document, undefined) {
   } else if (window.attachEvent) { // IE8 and before (oldIE)
 
     // dummy `console.log' and `console.warn' functions
-    if (!console) {
-      var console = {
+    if (!window.console) {
+      window.console = {
         log: function(msg) {},
-        warn: function(msg) { alert(msg); }
+        warn: function(msg) {/* alert(msg); */}
       };
     }
 
     // worst hack ever for IE6 and IE7
-    if (!JSON) {
-      JSON = {
-        parse: function(str) { return eval(str); }, // XXX I know...
-        stringify: function(a, b, c) { return 'no JSON support'; }
+    if (!window.JSON) {
+      console.warn('[l10n] no JSON support');
+      getL10nAttributes = function(element) {
+        if (!element)
+          return {};
+        var l10nId = element.getAttribute('data-l10n-id'),
+            l10nArgs = element.getAttribute('data-l10n-args'),
+            args = {};
+        if (l10nArgs) try {
+          args = eval(l10nArgs); // XXX yeah, I know...
+        } catch (e) {
+          console.warn('[l10n] could not parse arguments for #' + l10nId);
+        }
+        return { id: l10nId, args: args };
       };
     }
 
@@ -893,31 +901,29 @@ document.webL10n = (function(window, document, undefined) {
     if (!document.querySelectorAll) {
       var qsa = window.Sizzle || window.qwery;
       if (!qsa)
-        console.warn('[l10n] no "querySelectorAll" method available');
+        console.warn('[l10n] no "querySelectorAll" support');
 
       getTranslatableChildren = function(element) {
         if (!element)
           return [];
         if (qsa)
           return qsa('*[data-l10n-id]', element);
-        var elements = element.getElementsByTagName('*'),
+        var nodes = element.getElementsByTagName('*'),
             l10nElements = [];
-        for (var i = 0; i < elements.length; i++) {
-          if (elements[i].getAttribute('data-l10n-id'))
-            l10nElements.push(elements[i]);
-        }
-        return [];
+        for (var i = 0; i < nodes.length; i++)
+          if (nodes[i].getAttribute('data-l10n-id'))
+            l10nElements.push(nodes[i]);
+        return l10nElements;
       };
 
       getL10nResourceLinks = function() {
-        var links = document.getElementsByTagName('link'),
-            l10nLinks = [];
         if (qsa)
           return qsa('link[type="application/l10n"]');
-        for (var i = 0; i < links.length; i++) {
+        var links = document.getElementsByTagName('link'),
+            l10nLinks = [];
+        for (var i = 0; i < links.length; i++)
           if (links[i].type == 'application/l10n')
             l10nLinks.push(links[i]);
-        }
         return l10nLinks;
       };
     }

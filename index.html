@@ -4,13 +4,8 @@
   <title> webL10n test page </title>
   <meta charset="utf-8" />
   <link rel="resource" type="application/l10n" href="locales.properties" />
-  <!--[if lte IE 7]><![endif]-->
   <!-- For IE6 and IE7, you probably want to have a JSON lib
-       + an implementation of querySelectionAll() — e.g. qwery, sizzle…
-    <script type="text/javascript" src="https://raw.github.com/douglascrockford/JSON-js/master/json.js"></script>
-    <script type="text/javascript" src="https://raw.github.com/ded/qwery/master/qwery.min.js"></script>
-    <script type="text/javascript" src="https://raw.github.com/jquery/sizzle/master/sizzle.js"></script>
-  -->
+       + an implementation of querySelectionAll() — e.g. qwery or Sizzle -->
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     function onLocalized() {
@@ -20,16 +15,15 @@
       document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] =
         l10n.getText();
       document.getElementById('json').getElementsByTagName('textarea')[0][textProp] =
-        JSON.stringify(l10n.getData(), undefined, 2);
+        window.JSON ? JSON.stringify(l10n.getData(), undefined, 2) : 'no JSON support';
     };
     if (document.addEventListener) {
       window.addEventListener('localized', onLocalized, false);
     } else {
       document.documentElement.localized = 0;
       document.documentElement.attachEvent('onpropertychange', function(e) {
-        if (e.propertyName === 'localized') {
+        if (e.propertyName === 'localized')
           onLocalized();
-        }
       });
     }
   </script>
@@ -52,6 +46,13 @@
       background-color: #eee;
     }
   </style>
+  <!--[if lte IE 9]>
+    <style type="text/css">
+      /* IE<10 doesn't support CSS flex-box... */
+      #l10n { width: 50%; position: absolute; left: 0.5%; }
+      #json { width: 50%; position: absolute; right: 0; }
+    </style>
+  <![endif]-->
 </head>
 <body>
   <nav>
