@@ -22,6 +22,7 @@
 'use strict';
 
 document.webL10n = (function(window, document, undefined) {
+
   var gL10nData = {},
       gTextData = '',
       gTextProp = 'textContent',
@@ -810,7 +811,7 @@ document.webL10n = (function(window, document, undefined) {
     // translate element (TODO: security checks?)
     // for the node content, replace the content of the first child textNode
     // and clear other child textNodes
-    if (data[gTextProp]) { // XXX oldIE hacks
+    if (data[gTextProp]) { // XXX
       if (element.children.length === 0) {
         element[gTextProp] = data[gTextProp];
       } else {
@@ -869,7 +870,8 @@ document.webL10n = (function(window, document, undefined) {
       var lang = document.documentElement.lang || navigator.language;
       loadLocale(lang, translateFragment);
     }, false);
-  } else if (window.attachEvent) { // IE8 and before (oldIE)
+  } else if (window.attachEvent) { // IE8 and before (= oldIE)
+    // TODO: check if jQuery is loaded (CSS selector + JSON + events)
 
     // dummy `console.log' and `console.warn' functions
     if (!window.console) {
@@ -882,6 +884,7 @@ document.webL10n = (function(window, document, undefined) {
     // worst hack ever for IE6 and IE7
     if (!window.JSON) {
       console.warn('[l10n] no JSON support');
+
       getL10nAttributes = function(element) {
         if (!element)
           return {};
@@ -899,40 +902,36 @@ document.webL10n = (function(window, document, undefined) {
 
     // override `getTranslatableChildren' and `getL10nResourceLinks'
     if (!document.querySelectorAll) {
-      var qsa = window.Sizzle || window.qwery;
-      if (!qsa)
-        console.warn('[l10n] no "querySelectorAll" support');
+      console.warn('[l10n] no "querySelectorAll" support');
 
       getTranslatableChildren = function(element) {
         if (!element)
           return [];
-        if (qsa)
-          return qsa('*[data-l10n-id]', element);
         var nodes = element.getElementsByTagName('*'),
-            l10nElements = [];
-        for (var i = 0; i < nodes.length; i++)
+            l10nElements = [],
+            n = nodes.length;
+        for (var i = 0; i < n; i++)
           if (nodes[i].getAttribute('data-l10n-id'))
             l10nElements.push(nodes[i]);
         return l10nElements;
       };
 
       getL10nResourceLinks = function() {
-        if (qsa)
-          return qsa('link[type="application/l10n"]');
         var links = document.getElementsByTagName('link'),
-            l10nLinks = [];
-        for (var i = 0; i < links.length; i++)
+            l10nLinks = [],
+            n = links.length;
+        for (var i = 0; i < n; i++)
           if (links[i].type == 'application/l10n')
             l10nLinks.push(links[i]);
         return l10nLinks;
       };
     }
 
-    // fire non-standard `localized' DOM event
+    // fire non-standard `localized' DOM events
     if (document.createEventObject && !document.createEvent) {
       fireL10nReadyEvent = function(lang) {
-        // Hack to simulate a custom event in IE:
-        // to catch this event, add an event hendler to "onpropertychange".
+        // hack to simulate a custom event in IE:
+        // to catch this event, add an event handler to `onpropertychange'
         document.documentElement.localized = 1;
       };
     }
@@ -945,7 +944,7 @@ document.webL10n = (function(window, document, undefined) {
     });
   }
 
-  // cross-browser API
+  // cross-browser API (sorry, oldIE doesn't support getters & setters)
   return {
     // get a localized string
     get: function(key, args, fallback) {
@@ -969,7 +968,8 @@ document.webL10n = (function(window, document, undefined) {
       return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
     }
   };
-})(window, document);
+
+}) (window, document);
 
 // gettext-like shortcut for navigator.webL10n.get
 if (window._ === undefined)
