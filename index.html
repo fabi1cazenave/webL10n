@@ -4,11 +4,11 @@
   <title> webL10n test page </title>
   <meta charset="utf-8" />
   <link rel="resource" type="application/l10n" href="locales.properties" />
-  <!--[if lte IE 7]>
+  <!--[if lte IE 7]><![endif]-->
+  <!-- For IE6 and IE7, you probably want to have a JSON lib
+       + an implementation of querySelectionAll() — e.g. qwery, sizzle…
     <script type="text/javascript" src="https://raw.github.com/douglascrockford/JSON-js/master/json.js"></script>
     <script type="text/javascript" src="https://raw.github.com/ded/qwery/master/qwery.min.js"></script>
-  <![endif]-->
-  <!-- You can also replace qwery with sizzle:
     <script type="text/javascript" src="https://raw.github.com/jquery/sizzle/master/sizzle.js"></script>
   -->
   <script type="text/javascript" src="l10n.js"></script>
@@ -16,15 +16,17 @@
     function onLocalized() {
       var l10n = document.webL10n,
           textProp = document.body.textContent ? 'textContent' : 'innerText';
-      document.getElementsByTagName('select')[0].value = l10n.getLanguageCode();
-      document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] = l10n.getText();
-      document.getElementById('json').getElementsByTagName('textarea')[0][textProp] = JSON.stringify(l10n.getData(), undefined, 2);
+      document.getElementsByTagName('select')[0].value = l10n.getLanguage();
+      document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] =
+        l10n.getText();
+      document.getElementById('json').getElementsByTagName('textarea')[0][textProp] =
+        JSON.stringify(l10n.getData(), undefined, 2);
     };
     if (document.addEventListener) {
       window.addEventListener('localized', onLocalized, false);
     } else {
       document.documentElement.localized = 0;
-      document.documentElement.attachEvent("onpropertychange", function (e) {
+      document.documentElement.attachEvent('onpropertychange', function(e) {
         if (e.propertyName === 'localized') {
           onLocalized();
         }
@@ -78,7 +80,7 @@
       </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.webL10n.setLanguageCode(this.value || this.options[this.selectedIndex].text);">
+        <select onchange="document.webL10n.setLanguage(this.value || this.options[this.selectedIndex].text);">
           <option disabled selected> </option>
           <option>en</option>
           <option>fr</option>

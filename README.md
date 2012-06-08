@@ -28,11 +28,11 @@ Here’s a quick way to get a multilingual HTML page:
 
 ```ini
 [en-US]
-test=This is a test
-test.title=click me!
+test = This is a test
+test.title = click me!
 [fr]
-test=Ceci est un test
-test.title=cliquez-moi !
+test = Ceci est un test
+test.title = cliquez-moi !
 ```
 
 
@@ -43,17 +43,14 @@ JavaScript API
 
 ```javascript
 // Set the 'lang' and 'dir' attributes to <html> when the page is translated
-window.addEventListener('localized', function showBody() {
-  var html = document.querySelector('html');
-  var lang = document.webL10n.language;
-  html.setAttribute('lang', lang.code);
-  html.setAttribute('dir', lang.direction);
+window.addEventListener('localized', function() {
+  document.documentElement.setAttribute('lang', document.webL10n.getLanguage());
+  document.documentElement.setAttribute('dir', document.webL10n.getDirection());
 }, false);
 ```
 * `localized` event: fired when the page has been translated;
-* `getLangageCode`: get the ISO-639-1 code of the current locale;
-* `setLangageCode`: set the ISO-639-1 code of the current locale;
-* `getLanguageDirection`: direction (ltr|rtl) of the current language.
+* `getLanguage` / `setLanguage` method: get/set the ISO-639-1 code of the current locale;
+* `getDirection` method: direction (ltr|rtl) of the current language;
 * `get` method: get a translated string.
 
 ```javascript
@@ -78,9 +75,9 @@ where `welcome` is defined like this:
 
 ```ini
 [en-US]
-welcome=welcome, {{user}}!
+welcome = welcome, {{user}}!
 [fr]
-welcome=bienvenue, {{user}} !
+welcome = bienvenue, {{user}} !
 ```
 
 
@@ -108,21 +105,21 @@ The following strings might be gramatically incorrect when `n` equals zero or on
 
 ```ini
 [en-US]
-unread=You have {{n}} unread messages
+unread = You have {{n}} unread messages
 [fr]
-unread=Vous avez {{n}} nouveaux messages
+unread = Vous avez {{n}} nouveaux messages
 ```
 
 This can be solved by using the pre-defined `plural()` macro:
 
 ```ini
 [en-US]
-unreadMessages={[ plural(n) ]}
+unreadMessages = {[ plural(n) ]}
 unreadMessages[zero]  = You have no unread messages
 unreadMessages[one]   = You have one unread message
 unreadMessages[other] = You have {{n}} unread messages
 [fr]
-unreadMessages={[plural(n)]}
+unreadMessages = {[plural(n)]}
 unreadMessages[zero]  = Vous n’avez pas de nouveau message
 unreadMessages[one]   = Vous avez un nouveau message
 unreadMessages[other] = Vous avez {{n}} nouveaux messages
@@ -139,7 +136,7 @@ By default, we currently assume that all strings are applied as `textContent`.
 However, you can modify the `innerHTML` property with a simple rule:
 
 ```ini
-welcome.innerHTML=welcome, <strong>{{user}}</strong>!
+welcome.innerHTML = welcome, <strong>{{user}}</strong>!
 ```
 
 Warning: this raises a few security questions that we haven’t addressed yet. In a future version we might:
@@ -147,9 +144,9 @@ Warning: this raises a few security questions that we haven’t addressed yet. I
 * provide text-to-HTML methods (e.g. markdown) throught pseudo-properties, for example:
 
 ```ini
-welcome#text=welcome, {{user}}!
-welcome#html=welcome, <strong>{{user}}</strong>!
-welcome#mark=welcome, **{{user}}**!
+welcome#text = welcome, {{user}}!
+welcome#html = welcome, <strong>{{user}}</strong>!
+welcome#mark = welcome, **{{user}}**!
 ```
 
 

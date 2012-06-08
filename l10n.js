@@ -872,25 +872,48 @@ document.webL10n = (function(window, document, undefined) {
       loadLocale(lang, translateFragment);
     }, false);
   } else if (window.attachEvent) { // IE8 and before (oldIE)
+
+    // dummy `console.log' and `console.warn' functions
     if (!console) {
       var console = {
         log: function(msg) {},
         warn: function(msg) { alert(msg); }
       };
     }
+
+    // worst hack ever for IE6 and IE7
+    if (!JSON) {
+      JSON = {
+        parse: function(str) { return eval(str); }, // XXX I know...
+        stringify: function(a, b, c) { return 'no JSON support'; }
+      };
+    }
+
+    // override `getTranslatableChildren' and `getL10nResourceLinks'
     if (!document.querySelectorAll) {
+      var qsa = window.Sizzle || window.qwery;
+      if (!qsa)
+        console.warn('[l10n] no "querySelectorAll" method available');
+
       getTranslatableChildren = function(element) {
         if (!element)
           return [];
-        var qsa = window.Sizzle || window.qwery;
         if (qsa)
           return qsa('*[data-l10n-id]', element);
-        console.warn('[l10n] no "querySelectorAll" method available');
+        var elements = element.getElementsByTagName('*'),
+            l10nElements = [];
+        for (var i = 0; i < elements.length; i++) {
+          if (elements[i].getAttribute('data-l10n-id'))
+            l10nElements.push(elements[i]);
+        }
         return [];
       };
+
       getL10nResourceLinks = function() {
         var links = document.getElementsByTagName('link'),
             l10nLinks = [];
+        if (qsa)
+          return qsa('link[type="application/l10n"]');
         for (var i = 0; i < links.length; i++) {
           if (links[i].type == 'application/l10n')
             l10nLinks.push(links[i]);
@@ -898,6 +921,8 @@ document.webL10n = (function(window, document, undefined) {
         return l10nLinks;
       };
     }
+
+    // fire non-standard `localized' DOM event
     if (document.createEventObject && !document.createEvent) {
       fireL10nReadyEvent = function(lang) {
         // Hack to simulate a custom event in IE:
@@ -905,6 +930,8 @@ document.webL10n = (function(window, document, undefined) {
         document.documentElement.localized = 1;
       };
     }
+
+    // startup for IE<9
     window.attachEvent('onload', function() {
       gTextProp = document.body.textContent ? 'textContent' : 'innerText';
       var lang = document.documentElement.lang || window.navigator.userLanguage;
@@ -925,11 +952,11 @@ document.webL10n = (function(window, document, undefined) {
     getText: function() { return gTextData; },
 
     // get|set the document language
-    getLanguageCode: function() { return gLanguage; },
-    setLanguageCode: function(lang) { loadLocale(lang, translateFragment); },
+    getLanguage: function() { return gLanguage; },
+    setLanguage: function(lang) { loadLocale(lang, translateFragment); },
 
     // get the direction (ltr|rtl) of the current language
-    getLanguageDirection: function() {
+    getDirection: function() {
       // http://www.w3.org/International/questions/qa-scripts
       // Arabic, Hebrew, Farsi, Pashto, Urdu
       var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
