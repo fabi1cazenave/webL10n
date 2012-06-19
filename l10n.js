@@ -92,7 +92,7 @@ document.webL10n = (function(window, document, undefined) {
 
   function parseResource(href, lang, successCallback, failureCallback) {
     var baseURL = (href.substr(0, 4) === 'http') ?
-      href.replace(/\/[^\/]*$/, '/') : '';
+        href.replace(/\/[^\/]*$/, '/') : '';
 
     // handle escaped characters (backslashes) in a string
     function evalString(text) {
@@ -142,7 +142,7 @@ document.webL10n = (function(window, document, undefined) {
               match = reSection.exec(line);
               currentLang = match[1];
               skipLang = (currentLang != '*') &&
-                (currentLang != lang) && (currentLang != genericLang);
+                  (currentLang != lang) && (currentLang != genericLang);
               continue;
             } else if (skipLang) {
               continue;
@@ -273,7 +273,8 @@ document.webL10n = (function(window, document, undefined) {
     gL10nData = {};
     gTextData = '';
     gLanguage = '';
-    gMacros = {};
+    // TODO: clear all non predefined macros.
+    // There's no such macro /yet/ but we're planning to have some...
   }
 
 
@@ -638,9 +639,9 @@ document.webL10n = (function(window, document, undefined) {
       },
       '20': function(n) {
         if ((isBetween((n % 10), 3, 4) || ((n % 10) == 9)) && !(
-              isBetween((n % 100), 10, 19) ||
-              isBetween((n % 100), 70, 79) ||
-              isBetween((n % 100), 90, 99)
+            isBetween((n % 100), 10, 19) ||
+            isBetween((n % 100), 70, 79) ||
+            isBetween((n % 100), 90, 99)
             ))
           return 'few';
         if ((n % 1000000) === 0 && n !== 0)
@@ -910,9 +911,10 @@ document.webL10n = (function(window, document, undefined) {
         var nodes = element.getElementsByTagName('*'),
             l10nElements = [],
             n = nodes.length;
-        for (var i = 0; i < n; i++)
+        for (var i = 0; i < n; i++) {
           if (nodes[i].getAttribute('data-l10n-id'))
             l10nElements.push(nodes[i]);
+        }
         return l10nElements;
       };
 
@@ -920,9 +922,10 @@ document.webL10n = (function(window, document, undefined) {
         var links = document.getElementsByTagName('link'),
             l10nLinks = [],
             n = links.length;
-        for (var i = 0; i < n; i++)
+        for (var i = 0; i < n; i++) {
           if (links[i].type == 'application/l10n')
             l10nLinks.push(links[i]);
+        }
         return l10nLinks;
       };
     }
