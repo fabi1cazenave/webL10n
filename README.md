@@ -1,7 +1,7 @@
 This is an attempt to get a simple l10n library for modern browsers.
 The point is mainly to test the HTML syntax and the JS API before choosing a suitable data format (see last section).
 
-Demo: <http://kazhack.org/webL10n/>
+Demo: <http://fabi1cazenave.github.com/webL10n/>
 
 [More information on the Wiki.](https://github.com/fabi1cazenave/webL10n/wiki)
 
@@ -14,7 +14,7 @@ Here’s a quick way to get a multilingual HTML page:
 <html>
 <head>
   <script type="text/javascript" src="l10n.js"></script>
-  <link rel="resource" type="application/l10n" href="data.properties" />
+  <link rel="resource" type="application/l10n" href="data.ini" />
 </head>
 <body>
   <button data-l10n-id="test" title="click me!">This is a test</button>
@@ -24,7 +24,7 @@ Here’s a quick way to get a multilingual HTML page:
 
 * l10n resource files are associated to the HTML document with a ``<link>`` element;
 * translatable elements carry a ``data-l10n-id`` attribute;
-* l10n resources are stored in a bullet-proof ``*.properties`` file:
+* l10n resources are stored in a bullet-proof ``*.ini`` file:
 
 ```ini
 [en-US]
@@ -39,7 +39,7 @@ test.title = cliquez-moi !
 JavaScript API
 --------------
 
-``l10n.js`` exposes a rather simple ``document.webL10n`` object.
+`l10n.js` exposes a rather simple `document.webL10n` object.
 
 ```javascript
 // Set the 'lang' and 'dir' attributes to <html> when the page is translated
@@ -119,15 +119,15 @@ unreadMessages[zero]  = You have no unread messages
 unreadMessages[one]   = You have one unread message
 unreadMessages[other] = You have {{n}} unread messages
 [fr]
-unreadMessages = {[plural(n)]}
+unreadMessages = {[ plural(n) ]}
 unreadMessages[zero]  = Vous n’avez pas de nouveau message
 unreadMessages[one]   = Vous avez un nouveau message
 unreadMessages[other] = Vous avez {{n}} nouveaux messages
 ```
 
-Here, `unreadMessages` is an array and `{[plural(n)]}` is the selected index.
+Here, `unreadMessages` is an array and `{[plural(n)]}` points to the selected index.
 
-`plural()` returns zero | one | two | few | many | other, depending on `n` and the current language, as specified in the Unicode rules.
+`plural()` returns zero | one | two | few | many | other, depending on `n` and the current language, as specified in the Unicode rules. If one of these indexes isn’t found, the `[other]` index will be used by default.
 
 
 ### innerHTML
@@ -158,8 +158,8 @@ Further thoughts
 For mobile apps, here’s what I’d like to do:
 
 ```html
-<link rel="resource" type="application/l10n" href="data.properties" />
-<link rel="resource" type="application/l10n" href="mobile.properties"
+<link rel="resource" type="application/l10n" href="data.ini" />
+<link rel="resource" type="application/l10n" href="mobile.ini"
       media="screen and (max-width: 640px)" />
 ```
 
@@ -191,9 +191,7 @@ plural(n) = { n == 0 ? 'zero' : (n == 1 ? 'one' : 'other') }
 Browser support
 ---------------
 
-Tested on Firefox, Chrome and Opera. Should work on most modern browsers, including IE9 and later, but the current demo requires CSS flexbox…
-
-I don’t have much time to make it work on IE6/7/8 but if you do, a pull request would be very welcome — even if it breaks the current JavaScript API.
+Tested on Firefox, Chrome, Opera and Internet Explorer 6 to 10.
 
 
 License
