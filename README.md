@@ -44,8 +44,8 @@ JavaScript API
 ```javascript
 // Set the 'lang' and 'dir' attributes to <html> when the page is translated
 window.addEventListener('localized', function() {
-  document.documentElement.setAttribute('lang', document.webL10n.getLanguage());
-  document.documentElement.setAttribute('dir', document.webL10n.getDirection());
+  document.documentElement.lang = document.webL10n.getLanguage();
+  document.documentElement.dir = document.webL10n.getDirection();
 }, false);
 ```
 * `localized` event: fired when the page has been translated;
