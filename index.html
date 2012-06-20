@@ -1,18 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title> web-l10n test page </title>
+  <title> webL10n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="application/l10n" href="locales.properties" />
+  <link rel="resource" type="application/l10n" href="locales.ini" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
-    window.addEventListener('localized', function() {
-      var l10n = document.webL10n;
-      document.querySelector('select').value = l10n.language.name;
-      document.querySelector('#l10n textarea').textContent = l10n.text;
-      document.querySelector('#json textarea').textContent =
-          JSON.stringify(l10n.data, undefined, 2);
-    }, false);
+    function onLocalized() {
+      var l10n = document.webL10n,
+          textProp = document.body.textContent ? 'textContent' : 'innerText';
+      document.getElementsByTagName('select')[0].value = l10n.getLanguage();
+      document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] =
+        l10n.getText();
+      document.getElementById('json').getElementsByTagName('textarea')[0][textProp] =
+        window.JSON ? JSON.stringify(l10n.getData(), undefined, 2) : 'no JSON support';
+    };
+    if (document.addEventListener) {
+      window.addEventListener('localized', onLocalized, false);
+    } else {
+      document.documentElement.localized = 0;
+      document.documentElement.attachEvent('onpropertychange', function(e) {
+        if (e.propertyName === 'localized')
+          onLocalized();
+      });
+    }
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
@@ -33,12 +44,19 @@
       background-color: #eee;
     }
   </style>
+  <!--[if lte IE 9]>
+    <style type="text/css">
+      /* IE<10 doesn't support CSS flex-box... */
+      #l10n { width: 50%; position: absolute; left: 0.5%; }
+      #json { width: 50%; position: absolute; right: 0; }
+    </style>
+  <![endif]-->
 </head>
 <body>
   <nav>
     <a href="https://github.com/fabi1cazenave/webL10n"><img
       style="position: absolute; top: 0; right: 0; border: 0;"
-      src="https://a248.e.akamai.net/assets.github.com/img/abad93f42020b733148435e2cd92ce15c542d320/687474703a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f677265656e5f3030373230302e706e67"
+      src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png"
       alt="Fork me on GitHub"
     /></a>
   </nav>
@@ -55,9 +73,13 @@
         <button data-l10n-id="hello" accesskey="h" title="click"
             onclick="alert(_('sayHello'));">Hello!</button>
       </p>
+      <p data-l10n-id="Children">
+        Translate a node with children
+        <span data-l10n-id="Child">I'm a child</span>
+      </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.webL10n.language.name = this.value;">
+        <select onchange="document.webL10n.setLanguage(this.value || this.options[this.selectedIndex].text);">
           <option disabled selected> </option>
           <option>en</option>
           <option>fr</option>
@@ -69,11 +91,11 @@
   <div id="data">
     <div id="l10n">
       <p> l10n resources: </p>
-      <textarea readonly></textarea>
+      <textarea readonly rows="24" cols="80"></textarea>
     </div>
     <div id="json">
       <p> parsed data: </p>
-      <textarea readonly></textarea>
+      <textarea readonly rows="24" cols="80"></textarea>
     </div>
   </div>
 </body>
