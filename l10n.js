@@ -233,11 +233,16 @@ document.webL10n = (function(window, document, undefined) {
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
     clear();
+    gLanguage = lang;
 
     // check all <link type="application/l10n" href="..." /> nodes
     // and load the resource files
     var langLinks = getL10nResourceLinks();
     var langCount = langLinks.length;
+    if (langCount == 0) {
+      fireL10nReadyEvent(lang);
+      return;
+    }
 
     // start the callback when all resources are loaded
     var onResourceLoaded = null;
@@ -247,7 +252,7 @@ document.webL10n = (function(window, document, undefined) {
       if (gResourceCount >= langCount) {
         if (callback) // execute the [optional] callback
           callback();
-        fireL10nReadyEvent(lang); // fire a 'localized' DOM event
+        fireL10nReadyEvent(lang);
       }
     };
 
@@ -265,7 +270,6 @@ document.webL10n = (function(window, document, undefined) {
       };
     }
 
-    gLanguage = lang;
     for (var i = 0; i < langCount; i++) {
       var resource = new l10nResourceLink(langLinks[i]);
       var rv = resource.load(lang, onResourceLoaded);
