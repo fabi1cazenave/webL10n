@@ -22,14 +22,22 @@
 'use strict';
 
 document.webL10n = (function(window, document, undefined) {
-
   var gL10nData = {};
   var gTextData = '';
   var gTextProp = 'textContent';
   var gLanguage = '';
   var gMacros = {};
+  var gReadyState = 'loading';
 
+  // read-only setting -- we recommend to load l10n resources synchronously
+  var gAsyncResourceLoading = true;
+
+  // debug helpers
   var gDEBUG = false;
+  function consoleLog(message) {
+    if (gDEBUG)
+      console.log('[l10n] ' + message);
+  };
   function consoleWarn(message) {
     if (gDEBUG)
       console.warn('[l10n] ' + message);
@@ -99,8 +107,7 @@ document.webL10n = (function(window, document, undefined) {
    */
 
   function parseResource(href, lang, successCallback, failureCallback) {
-    var baseURL = (href.substr(0, 4) === 'http') ?
-        href.replace(/\/[^\/]*$/, '/') : '';
+    var baseURL = href.replace(/\/[^\/]*$/, '/');
 
     // handle escaped characters (backslashes) in a string
     function evalString(text) {
@@ -127,7 +134,7 @@ document.webL10n = (function(window, document, undefined) {
       var reComment = /^\s*#|^\s*$/;
       var reSection = /^\s*\[(.*)\]\s*$/;
       var reImport = /^\s*@import\s+url\((.*)\)\s*$/i;
-      var reSplit = /\s*=\s*/; // TODO: support backslashes to escape EOLs
+      var reSplit = /^([^=\s]*)\s*=\s*(.+)$/; // TODO: escape EOLs with '\'
 
       // parse the *.properties file into an associative array
       function parseRawLines(rawText, extendedSyntax) {
@@ -149,8 +156,8 @@ document.webL10n = (function(window, document, undefined) {
             if (reSection.test(line)) { // section start?
               match = reSection.exec(line);
               currentLang = match[1];
-              skipLang = (currentLang != '*') &&
-                  (currentLang != lang) && (currentLang != genericLang);
+              skipLang = (currentLang !== '*') &&
+                  (currentLang !== lang) && (currentLang !== genericLang);
               continue;
             } else if (skipLang) {
               continue;
@@ -162,9 +169,9 @@ document.webL10n = (function(window, document, undefined) {
           }
 
           // key-value pair
-          var tmp = line.split(reSplit);
-          if (tmp.length > 1)
-            dictionary[tmp[0]] = evalString(tmp[1]);
+          var tmp = line.match(reSplit);
+          if (tmp && tmp.length == 3)
+            dictionary[tmp[1]] = evalString(tmp[2]);
         }
       }
 
@@ -227,7 +234,7 @@ document.webL10n = (function(window, document, undefined) {
       // trigger callback
       if (successCallback)
         successCallback();
-    }, failureCallback, true);
+    }, failureCallback, gAsyncResourceLoading);
   };
 
   // load and parse all resources for the specified locale
@@ -240,7 +247,9 @@ document.webL10n = (function(window, document, undefined) {
     var langLinks = getL10nResourceLinks();
     var langCount = langLinks.length;
     if (langCount == 0) {
+      consoleLog('no resource to load, early way out');
       fireL10nReadyEvent(lang);
+      gReadyState = 'complete';
       return;
     }
 
@@ -253,6 +262,7 @@ document.webL10n = (function(window, document, undefined) {
         if (callback) // execute the [optional] callback
           callback();
         fireL10nReadyEvent(lang);
+        gReadyState = 'complete';
       }
     };
 
@@ -273,8 +283,10 @@ document.webL10n = (function(window, document, undefined) {
     for (var i = 0; i < langCount; i++) {
       var resource = new l10nResourceLink(langLinks[i]);
       var rv = resource.load(lang, onResourceLoaded);
-      if (rv != lang) // lang not found, used default resource instead
+      if (rv != lang) { // lang not found, used default resource instead
+        consoleWarn('"' + lang + '" resource not found');
         gLanguage = '';
+      }
     }
   }
 
@@ -736,8 +748,9 @@ document.webL10n = (function(window, document, undefined) {
   // fetch an l10n object, warn if not found, apply `args' if possible
   function getL10nData(key, args) {
     var data = gL10nData[key];
-    if (!data)
+    if (!data) {
       consoleWarn('#' + key + ' missing for [' + gLanguage + ']');
+    }
 
     /** This is where l10n expressions should be processed.
       * The plan is to support C-style expressions from the l20n project;
@@ -847,8 +860,9 @@ document.webL10n = (function(window, document, undefined) {
       delete data[gTextProp];
     }
 
-    for (var k in data)
+    for (var k in data) {
       element[k] = data[k];
+    }
   }
 
   // translate an HTML subtree
@@ -858,8 +872,9 @@ document.webL10n = (function(window, document, undefined) {
     // check all translatable children (= w/ a `data-l10n-id' attribute)
     var children = getTranslatableChildren(element);
     var elementCount = children.length;
-    for (var i = 0; i < elementCount; i++)
+    for (var i = 0; i < elementCount; i++) {
       translateElement(children[i]);
+    }
 
     // translate element itself if necessary
     translateElement(element);
@@ -872,7 +887,7 @@ document.webL10n = (function(window, document, undefined) {
    * Warning: this part of the code contains browser-specific chunks --
    * that's where obsolete browsers, namely IE8 and earlier, are handled.
    *
-   * Unlike the rest of the lib, this section is not shared with B2G/Gaia.
+   * Unlike the rest of the lib, this section is not shared with FirefoxOS/Gaia.
    */
 
   // browser-specific startup
@@ -886,15 +901,16 @@ document.webL10n = (function(window, document, undefined) {
 
     // dummy `console.log' and `console.warn' functions
     if (!window.console) {
-      window.console = {
-        log: function(msg) {},
-        warn: function(msg) {/* alert(msg); */}
+      consoleLog = function(message) {}; // just ignore console.log calls
+      consoleWarn = function(message) {
+        if (gDEBUG)
+          alert('[l10n] ' + message); // vintage debugging, baby!
       };
     }
 
     // worst hack ever for IE6 and IE7
     if (!window.JSON) {
-      console.warn('[l10n] no JSON support');
+      consoleWarn('[l10n] no JSON support');
 
       getL10nAttributes = function(element) {
         if (!element)
@@ -905,7 +921,7 @@ document.webL10n = (function(window, document, undefined) {
         if (l10nArgs) try {
           args = eval(l10nArgs); // XXX yeah, I know...
         } catch (e) {
-          console.warn('[l10n] could not parse arguments for #' + l10nId);
+          consoleWarn('[l10n] could not parse arguments for #' + l10nId);
         }
         return { id: l10nId, args: args };
       };
@@ -913,7 +929,7 @@ document.webL10n = (function(window, document, undefined) {
 
     // override `getTranslatableChildren' and `getL10nResourceLinks'
     if (!document.querySelectorAll) {
-      console.warn('[l10n] no "querySelectorAll" support');
+      consoleWarn('[l10n] no "querySelectorAll" support');
 
       getTranslatableChildren = function(element) {
         if (!element)
@@ -962,7 +978,10 @@ document.webL10n = (function(window, document, undefined) {
     // get a localized string
     get: function(key, args, fallback) {
       var data = getL10nData(key, args) || fallback;
-      return data ? data[gTextProp] : '{{' + key + '}}';
+      if (data) { // XXX double-check this
+        return 'textContent' in data ? data.textContent : '';
+      }
+      return '{{' + key + '}}';
     },
 
     // debug
@@ -979,7 +998,13 @@ document.webL10n = (function(window, document, undefined) {
       // Arabic, Hebrew, Farsi, Pashto, Urdu
       var rtlList = ['ar', 'he', 'fa', 'ps', 'ur'];
       return (rtlList.indexOf(gLanguage) >= 0) ? 'rtl' : 'ltr';
-    }
+    },
+
+    // translate an element or document fragment
+    translate: translateFragment,
+
+    // this can be used to prevent race conditions
+    getReadyState() { return gReadyState; }
   };
 
 }) (window, document);

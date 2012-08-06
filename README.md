@@ -1,7 +1,17 @@
-This is an attempt to get a simple l10n library for modern browsers.
-The point is mainly to test the HTML syntax and the JS API before choosing a suitable data format (see last section).
+webL10n is a client-side, cross-browser i18n/l10n library (internationalization / localization), designed with modern web applications in mind.
 
-Demo: <http://fabi1cazenave.github.com/webL10n/>
+Unlike other i18n/l10n libraries, webL10n supports:
+
+* declarative localization: elements with `l10n-*` attributes are automatically translated when the document is loaded;
+* named variables instead of printf-like `%s` tokens;
+* a simple and full-featured pluralization system;
+* server-less language negotiation (think of offline webapps);
+
+We don’t focus on the gettext format: the bullet-proof `*.properties` format, used in Mozilla and GWT projects, is preferred — at least, by default.
+
+Demo: <http://fabi1cazenave.github.com/webL10n/> (outdated — feel free to submit a new one! ^^)
+
+This library is also used by the FirefoxOS front-end (Gaia) with a different JavaScript API: a modern API for FirefoxOS/Gaia (with web standards in mind), a basic cross-browser one in webL10n (compatibility with IE6/IE7/IE8).
 
 [More information on the Wiki.](https://github.com/fabi1cazenave/webL10n/wiki)
 
