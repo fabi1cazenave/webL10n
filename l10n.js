@@ -1004,7 +1004,7 @@ document.webL10n = (function(window, document, undefined) {
     translate: translateFragment,
 
     // this can be used to prevent race conditions
-    getReadyState() { return gReadyState; }
+    getReadyState: function() { return gReadyState; }
   };
 
 }) (window, document);
