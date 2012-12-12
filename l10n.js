@@ -77,9 +77,9 @@ document.webL10n = (function(window, document, undefined) {
 
   function fireL10nReadyEvent(lang) {
     var evtObject = document.createEvent('Event');
-    evtObject.initEvent('localized', false, false);
+    evtObject.initEvent('localized', true, false);
     evtObject.language = lang;
-    window.dispatchEvent(evtObject);
+    document.dispatchEvent(evtObject);
   }
 
 
