@@ -1,23 +1,25 @@
-/** Copyright (c) 2011-2012 Fabien Cazenave, Mozilla.
-  *
-  * Permission is hereby granted, free of charge, to any person obtaining a copy
-  * of this software and associated documentation files (the "Software"), to
-  * deal in the Software without restriction, including without limitation the
-  * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-  * sell copies of the Software, and to permit persons to whom the Software is
-  * furnished to do so, subject to the following conditions:
-  *
-  * The above copyright notice and this permission notice shall be included in
-  * all copies or substantial portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-  * IN THE SOFTWARE.
-  */
+/**
+ * Copyright (c) 2011-2013 Fabien Cazenave, Mozilla.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
 /*jshint browser: true, devel: true, es5: true, globalstrict: true */
 'use strict';
 
@@ -29,19 +31,43 @@ document.webL10n = (function(window, document, undefined) {
   var gMacros = {};
   var gReadyState = 'loading';
 
-  // read-only setting -- we recommend to load l10n resources synchronously
-  var gAsyncResourceLoading = true;
+  /**
+   * Synchronously loading l10n resources significantly minimizes flickering
+   * from displaying the app with non-localized strings and then updating the
+   * strings. Although this will block all script execution on this page, we
+   * expect that the l10n resources are available locally on flash-storage.
+   *
+   * As synchronous XHR is generally considered as a bad idea, we're still
+   * loading l10n resources asynchronously -- but we keep this in a setting,
+   * just in case... and applications using this library should hide their
+   * content until the `localized' event happens.
+   */
 
-  // debug helpers
-  var gDEBUG = false;
+  var gAsyncResourceLoading = true; // read-only
+
+
+  /**
+   * Debug helpers
+   *
+   *   gDEBUG == 0: don't display any console message
+   *   gDEBUG == 1: display only warnings, not logs
+   *   gDEBUG == 2: display all console messages
+   */
+
+  var gDEBUG = 1;
+
   function consoleLog(message) {
-    if (gDEBUG)
+    if (gDEBUG >= 2) {
       console.log('[l10n] ' + message);
+    }
   };
+
   function consoleWarn(message) {
-    if (gDEBUG)
+    if (gDEBUG) {
       console.warn('[l10n] ' + message);
+    }
   };
+
 
   /**
    * DOM helpers for the so-called "HTML API".
@@ -52,6 +78,12 @@ document.webL10n = (function(window, document, undefined) {
 
   function getL10nResourceLinks() {
     return document.querySelectorAll('link[type="application/l10n"]');
+  }
+
+  function getL10nDictionary() {
+    var script = document.querySelector('script[type="application/l10n"]');
+    // TODO: support multiple and external JSON dictionaries
+    return script ? JSON.parse(script.innerHTML) : null;
   }
 
   function getTranslatableChildren(element) {
@@ -170,8 +202,9 @@ document.webL10n = (function(window, document, undefined) {
 
           // key-value pair
           var tmp = line.match(reSplit);
-          if (tmp && tmp.length == 3)
+          if (tmp && tmp.length == 3) {
             dictionary[tmp[1]] = evalString(tmp[2]);
+          }
         }
       }
 
@@ -179,7 +212,7 @@ document.webL10n = (function(window, document, undefined) {
       function loadImport(url) {
         loadResource(url, function(content) {
           parseRawLines(content, false); // don't allow recursive imports
-        }, false, false); // load synchronously
+        }, null, false); // load synchronously
       }
 
       // fill the dictionary
@@ -189,6 +222,11 @@ document.webL10n = (function(window, document, undefined) {
 
     // load the specified resource file
     function loadResource(url, onSuccess, onFailure, asynchronous) {
+      onSuccess = onSuccess || function _onSuccess(data) {};
+      onFailure = onFailure || function _onFailure() {
+        consoleWarn(url + ' not found.');
+      };
+
       var xhr = new XMLHttpRequest();
       xhr.open('GET', url, asynchronous);
       if (xhr.overrideMimeType) {
@@ -197,15 +235,22 @@ document.webL10n = (function(window, document, undefined) {
       xhr.onreadystatechange = function() {
         if (xhr.readyState == 4) {
           if (xhr.status == 200 || xhr.status === 0) {
-            if (onSuccess)
-              onSuccess(xhr.responseText);
+            onSuccess(xhr.responseText);
           } else {
-            if (onFailure)
-              onFailure();
+            onFailure();
           }
         }
       };
-      xhr.send(null);
+      xhr.onerror = onFailure;
+      xhr.ontimeout = onFailure;
+
+      // in Firefox OS with the app:// protocol, trying to XHR a non-existing
+      // URL will raise an exception here -- hence this ugly try...catch.
+      try {
+        xhr.send(null);
+      } catch (e) {
+        onFailure();
+      }
     }
 
     // load and parse l10n data (warning: global variables are used here)
@@ -232,13 +277,16 @@ document.webL10n = (function(window, document, undefined) {
       }
 
       // trigger callback
-      if (successCallback)
+      if (successCallback) {
         successCallback();
+      }
     }, failureCallback, gAsyncResourceLoading);
   };
 
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
+    callback = callback || function _callback() {};
+
     clear();
     gLanguage = lang;
 
@@ -247,7 +295,16 @@ document.webL10n = (function(window, document, undefined) {
     var langLinks = getL10nResourceLinks();
     var langCount = langLinks.length;
     if (langCount == 0) {
-      consoleLog('no resource to load, early way out');
+      // we might have a pre-compiled dictionary instead
+      var dict = getL10nDictionary();
+      if (dict && dict.locales && dict.default_locale) {
+        consoleLog('using the embedded JSON directory, early way out');
+        gL10nData = dict.locales[lang] || dict.locales[dict.default_locale];
+        callback();
+      } else {
+        consoleLog('no resource to load, early way out');
+      }
+      // early way out
       fireL10nReadyEvent(lang);
       gReadyState = 'complete';
       return;
@@ -259,8 +316,7 @@ document.webL10n = (function(window, document, undefined) {
     onResourceLoaded = function() {
       gResourceCount++;
       if (gResourceCount >= langCount) {
-        if (callback) // execute the [optional] callback
-          callback();
+        callback();
         fireL10nReadyEvent(lang);
         gReadyState = 'complete';
       }
@@ -722,8 +778,9 @@ document.webL10n = (function(window, document, undefined) {
       return str;
 
     // initialize _pluralRules
-    if (!gMacros._pluralRules)
+    if (!gMacros._pluralRules) {
       gMacros._pluralRules = getPluralRules(gLanguage);
+    }
     var index = '[' + gMacros._pluralRules(n) + ']';
 
     // try to find a [zero|one|two] key if it's defined
@@ -735,6 +792,8 @@ document.webL10n = (function(window, document, undefined) {
       str = gL10nData[key + '[two]'][prop];
     } else if ((key + index) in gL10nData) {
       str = gL10nData[key + index][prop];
+    } else if ((key + '[other]') in gL10nData) {
+      str = gL10nData[key + '[other]'][prop];
     }
 
     return str;
@@ -865,13 +924,14 @@ document.webL10n = (function(window, document, undefined) {
     }
   }
 
+  // webkit browsers don't currently support 'children' on SVG elements...
   function getChildElementCount(element) {
-    // WebKit browsers don't currently support 'children' on SVG elements.
-    if (element.children)
+    if (element.children) {
       return element.children.length;
-    if (typeof element.childElementCount !== "undefined")
+    }
+    if (typeof element.childElementCount !== 'undefined') {
       return element.childElementCount;
-
+    }
     var count = 0;
     for (var i = 0; i < element.childNodes.length; i++) {
       count += element.nodeType === 1 ? 1 : 0;
@@ -917,8 +977,9 @@ document.webL10n = (function(window, document, undefined) {
     if (!window.console) {
       consoleLog = function(message) {}; // just ignore console.log calls
       consoleWarn = function(message) {
-        if (gDEBUG)
+        if (gDEBUG) {
           alert('[l10n] ' + message); // vintage debugging, baby!
+        }
       };
     }
 
@@ -967,6 +1028,19 @@ document.webL10n = (function(window, document, undefined) {
             l10nLinks.push(links[i]);
         }
         return l10nLinks;
+      };
+    }
+
+    // override `getL10nDictionary'
+    if (!window.JSON || !document.querySelectorAll) {
+      getL10nDictionary = function() {
+        var scripts = document.getElementsByName('script');
+        for (var i = 0; i < scripts.length; i++) {
+          if (scripts[i].type == 'application/l10n') {
+            return eval(scripts[i].innerHTML);
+          }
+        }
+        return null;
       };
     }
 
@@ -1024,6 +1098,7 @@ document.webL10n = (function(window, document, undefined) {
 }) (window, document);
 
 // gettext-like shortcut for navigator.webL10n.get
-if (window._ === undefined)
+if (window._ === undefined) {
   var _ = document.webL10n.get;
+}
 
