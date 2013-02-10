@@ -991,9 +991,6 @@ document.webL10n = (function(window, document, undefined) {
         };
         var xhr = new ActiveXObject('Microsoft.XMLHTTP');
         xhr.open('GET', url, asynchronous);
-        if (xhr.overrideMimeType) {
-          xhr.overrideMimeType('text/plain; charset=utf-8');
-        }
         xhr.onreadystatechange = function() {
           if (xhr.readyState == 4) {
             if (xhr.status == 200) {
