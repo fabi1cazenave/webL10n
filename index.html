@@ -3,7 +3,8 @@
 <head>
   <title> webL10n test page </title>
   <meta charset="utf-8" />
-  <link rel="resource" type="application/l10n" href="locales.ini" />
+
+  <link rel="resource" type="application/l10n" href="l10n/locales.ini" />
   <script type="text/javascript" src="l10n.js"></script>
   <script type="text/javascript">
     function onLocalized() {
@@ -24,25 +25,8 @@
     }
     document.webL10n.ready(onLocalized);
   </script>
-  <link rel="stylesheet" type="text/css" href="style.css" />
-  <style type="text/css">
-    #test {
-      margin: 2em;
-    }
-    #test div {
-      max-width: 600px;
-      margin: 1em auto;
-      padding: 0 1em;
-      border: 1px dashed black;
-    }
-    #data p {
-      height: 1em;
-      margin: 0;
-    }
-    textarea[readonly] {
-      background-color: #eee;
-    }
-  </style>
+
+  <link rel="stylesheet" type="text/css" href="css/layout.css" />
   <!--[if lte IE 9]>
     <style type="text/css">
       /* IE<10 doesn't support CSS flex-box... */
@@ -52,16 +36,12 @@
   <![endif]-->
 </head>
 <body>
-  <nav>
-    <a href="https://github.com/fabi1cazenave/webL10n"><img
-      style="position: absolute; top: 0; right: 0; border: 0;"
-      src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png"
-      alt="Fork me on GitHub"
-    /></a>
-  </nav>
+  <a href="https://github.com/fabi1cazenave/webL10n"
+    id="github"><span>Fork me on GitHub</span></a>
+
   <div id="test">
     <div>
-      <p data-l10n-id="about">This section is translated dynamically</p>
+      <p data-l10n-id="about">This section has been translated dynamically.</p>
       <p style="text-align: center;">
         <span data-l10n-id="Phone" title="phone">Phone</span>
         <span data-l10n-id="Calculator">Calculator</span>
@@ -89,6 +69,7 @@
       </p>
     </div>
   </div>
+
   <div id="data">
     <div id="l10n">
       <p> l10n resources: </p>
@@ -101,3 +82,4 @@
   </div>
 </body>
 </html>
+

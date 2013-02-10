@@ -54,7 +54,7 @@ document.webL10n = (function(window, document, undefined) {
    *   gDEBUG == 2: display all console messages
    */
 
-  var gDEBUG = 0;
+  var gDEBUG = 1;
 
   function consoleLog(message) {
     if (gDEBUG >= 2) {
@@ -112,6 +112,38 @@ document.webL10n = (function(window, document, undefined) {
     evtObject.initEvent('localized', true, false);
     evtObject.language = lang;
     document.dispatchEvent(evtObject);
+  }
+
+  function xhrLoadText(url, onSuccess, onFailure, asynchronous) {
+    onSuccess = onSuccess || function _onSuccess(data) {};
+    onFailure = onFailure || function _onFailure() {
+      consoleWarn(url + ' not found.');
+    };
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, asynchronous);
+    if (xhr.overrideMimeType) {
+      xhr.overrideMimeType('text/plain; charset=utf-8');
+    }
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState == 4) {
+        if (xhr.status == 200 || xhr.status === 0) {
+          onSuccess(xhr.responseText);
+        } else {
+          onFailure();
+        }
+      }
+    };
+    xhr.onerror = onFailure;
+    xhr.ontimeout = onFailure;
+
+    // in Firefox OS with the app:// protocol, trying to XHR a non-existing
+    // URL will raise an exception here -- hence this ugly try...catch.
+    try {
+      xhr.send(null);
+    } catch (e) {
+      onFailure();
+    }
   }
 
 
@@ -210,7 +242,7 @@ document.webL10n = (function(window, document, undefined) {
 
       // import another *.properties file
       function loadImport(url) {
-        loadResource(url, function(content) {
+        xhrLoadText(url, function(content) {
           parseRawLines(content, false); // don't allow recursive imports
         }, null, false); // load synchronously
       }
@@ -220,41 +252,8 @@ document.webL10n = (function(window, document, undefined) {
       return dictionary;
     }
 
-    // load the specified resource file
-    function loadResource(url, onSuccess, onFailure, asynchronous) {
-      onSuccess = onSuccess || function _onSuccess(data) {};
-      onFailure = onFailure || function _onFailure() {
-        consoleWarn(url + ' not found.');
-      };
-
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, asynchronous);
-      if (xhr.overrideMimeType) {
-        xhr.overrideMimeType('text/plain; charset=utf-8');
-      }
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-          if (xhr.status == 200 || xhr.status === 0) {
-            onSuccess(xhr.responseText);
-          } else {
-            onFailure();
-          }
-        }
-      };
-      xhr.onerror = onFailure;
-      xhr.ontimeout = onFailure;
-
-      // in Firefox OS with the app:// protocol, trying to XHR a non-existing
-      // URL will raise an exception here -- hence this ugly try...catch.
-      try {
-        xhr.send(null);
-      } catch (e) {
-        onFailure();
-      }
-    }
-
     // load and parse l10n data (warning: global variables are used here)
-    loadResource(href, function(response) {
+    xhrLoadText(href, function(response) {
       gTextData += response; // mostly for debug
 
       // parse *.properties text data into an l10n dictionary
@@ -983,10 +982,33 @@ document.webL10n = (function(window, document, undefined) {
       };
     }
 
+    // XMLHttpRequest for IE6
+    if (!window.XMLHttpRequest) {
+      xhrLoadText = function(url, onSuccess, onFailure, asynchronous) {
+        onSuccess = onSuccess || function _onSuccess(data) {};
+        onFailure = onFailure || function _onFailure() {
+          consoleWarn(url + ' not found.');
+        };
+        var xhr = new ActiveXObject('Microsoft.XMLHTTP');
+        xhr.open('GET', url, asynchronous);
+        if (xhr.overrideMimeType) {
+          xhr.overrideMimeType('text/plain; charset=utf-8');
+        }
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4) {
+            if (xhr.status == 200) {
+              onSuccess(xhr.responseText);
+            } else {
+              onFailure();
+            }
+          }
+        };
+        xhr.send(null);
+      }
+    }
+
     // worst hack ever for IE6 and IE7
     if (!window.JSON) {
-      consoleWarn('[l10n] no JSON support');
-
       getL10nAttributes = function(element) {
         if (!element)
           return {};
@@ -996,7 +1018,7 @@ document.webL10n = (function(window, document, undefined) {
         if (l10nArgs) try {
           args = eval(l10nArgs); // XXX yeah, I know...
         } catch (e) {
-          consoleWarn('[l10n] could not parse arguments for #' + l10nId);
+          consoleWarn('could not parse arguments for #' + l10nId);
         }
         return { id: l10nId, args: args };
       };
@@ -1004,8 +1026,6 @@ document.webL10n = (function(window, document, undefined) {
 
     // override `getTranslatableChildren' and `getL10nResourceLinks'
     if (!document.querySelectorAll) {
-      consoleWarn('[l10n] no "querySelectorAll" support');
-
       getTranslatableChildren = function(element) {
         if (!element)
           return [];
@@ -1018,7 +1038,6 @@ document.webL10n = (function(window, document, undefined) {
         }
         return l10nElements;
       };
-
       getL10nResourceLinks = function() {
         var links = document.getElementsByTagName('link'),
             l10nLinks = [],
@@ -1098,9 +1117,9 @@ document.webL10n = (function(window, document, undefined) {
         return;
       } else if (gReadyState == 'complete' || gReadyState == 'interactive') {
         window.setTimeout(callback);
-      } else if (window.addEventListener) {
-        window.addEventListener('localized', callback);
-      } else if (window.attachEvent) {
+      } else if (document.addEventListener) {
+        document.addEventListener('localized', callback);
+      } else if (document.attachEvent) {
         document.documentElement.attachEvent('onpropertychange', function(e) {
           if (e.propertyName === 'localized') {
             callback();
