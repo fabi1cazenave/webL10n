@@ -54,7 +54,7 @@ document.webL10n = (function(window, document, undefined) {
    *   gDEBUG == 2: display all console messages
    */
 
-  var gDEBUG = 1;
+  var gDEBUG = 0;
 
   function consoleLog(message) {
     if (gDEBUG >= 2) {
@@ -139,7 +139,7 @@ document.webL10n = (function(window, document, undefined) {
    */
 
   function parseResource(href, lang, successCallback, failureCallback) {
-    var baseURL = href.replace(/\/[^\/]*$/, '/');
+    var baseURL = href.replace(/[^\/]*$/, '') || './';
 
     // handle escaped characters (backslashes) in a string
     function evalString(text) {
@@ -1067,7 +1067,7 @@ document.webL10n = (function(window, document, undefined) {
     get: function(key, args, fallback) {
       var data = getL10nData(key, args) || fallback;
       if (data) { // XXX double-check this
-        return 'textContent' in data ? data.textContent : '';
+        return gTextProp in data ? data[gTextProp] : '';
       }
       return '{{' + key + '}}';
     },
@@ -1092,9 +1092,23 @@ document.webL10n = (function(window, document, undefined) {
     translate: translateFragment,
 
     // this can be used to prevent race conditions
-    getReadyState: function() { return gReadyState; }
+    getReadyState: function() { return gReadyState; },
+    ready: function(callback) {
+      if (!callback) {
+        return;
+      } else if (gReadyState == 'complete' || gReadyState == 'interactive') {
+        window.setTimeout(callback);
+      } else if (window.addEventListener) {
+        window.addEventListener('localized', callback);
+      } else if (window.attachEvent) {
+        document.documentElement.attachEvent('onpropertychange', function(e) {
+          if (e.propertyName === 'localized') {
+            callback();
+          }
+        });
+      }
+    }
   };
-
 }) (window, document);
 
 // gettext-like shortcut for navigator.webL10n.get

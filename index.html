@@ -8,22 +8,21 @@
   <script type="text/javascript">
     function onLocalized() {
       var l10n = document.webL10n,
-          textProp = document.body.textContent ? 'textContent' : 'innerText';
-      document.getElementsByTagName('select')[0].value = l10n.getLanguage();
-      document.getElementById('l10n').getElementsByTagName('textarea')[0][textProp] =
-        l10n.getText();
-      document.getElementById('json').getElementsByTagName('textarea')[0][textProp] =
+          textProp = document.body.textContent ? 'textContent' : 'innerText',
+          ui = {
+            l10n: document.getElementById('l10n').getElementsByTagName('textarea')[0],
+            json: document.getElementById('json').getElementsByTagName('textarea')[0],
+            lang: document.getElementsByTagName('select')[0]
+          };
+      ui.lang.value = l10n.getLanguage(); // not working with IE<9
+      ui.lang.onchange = function() {
+        l10n.setLanguage(this.value || this.options[this.selectedIndex].text);
+      };
+      ui.l10n[textProp] = l10n.getText();
+      ui.json[textProp] =
         window.JSON ? JSON.stringify(l10n.getData(), undefined, 2) : 'no JSON support';
-    };
-    if (document.addEventListener) {
-      window.addEventListener('localized', onLocalized, false);
-    } else {
-      document.documentElement.localized = 0;
-      document.documentElement.attachEvent('onpropertychange', function(e) {
-        if (e.propertyName === 'localized')
-          onLocalized();
-      });
     }
+    document.webL10n.ready(onLocalized);
   </script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
@@ -79,13 +78,13 @@
       </p>
       <p style="text-align: right;">
         <span data-l10n-id="langSelection">language selection</span>
-        <select onchange="document.webL10n.setLanguage(this.value || this.options[this.selectedIndex].text);">
+        <select>
           <option disabled selected> </option>
           <option>en</option>
           <option>es</option>
           <option>fr</option>
           <option>de</option>
-          <option>sq</option>          
+          <option>sq</option>
         </select>
       </p>
     </div>
