@@ -24,7 +24,7 @@ Here’s a quick way to get a multilingual HTML page:
 <html>
 <head>
   <script type="text/javascript" src="l10n.js"></script>
-  <link rel="resource" type="application/l10n" href="data.ini" />
+  <link rel="prefetch" type="application/l10n" href="data.ini" />
 </head>
 <body>
   <button data-l10n-id="test" title="click me!">This is a test</button>
@@ -168,8 +168,8 @@ Further thoughts
 For mobile apps, here’s what I’d like to do:
 
 ```html
-<link rel="resource" type="application/l10n" href="data.ini" />
-<link rel="resource" type="application/l10n" href="mobile.ini"
+<link rel="prefetch" type="application/l10n" href="data.ini" />
+<link rel="prefetch" type="application/l10n" href="mobile.ini"
       media="screen and (max-width: 640px)" />
 ```
 
