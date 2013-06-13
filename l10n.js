@@ -965,10 +965,18 @@ document.webL10n = (function(window, document, undefined) {
 
   // browser-specific startup
   if (document.addEventListener) { // modern browsers and IE9+
-    document.addEventListener('DOMContentLoaded', function() {
+    // If the document is not fully loaded yet, wait for DOMContentLoaded.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        var lang = document.documentElement.lang || navigator.language;
+        loadLocale(lang, translateFragment);
+      }, false);
+    } else {
+      // l10n.js is being loaded with <script defer> or <script async>,
+      // the DOM is ready for parsing.
       var lang = document.documentElement.lang || navigator.language;
       loadLocale(lang, translateFragment);
-    }, false);
+    }
   } else if (window.attachEvent) { // IE8 and before (= oldIE)
     // TODO: check if jQuery is loaded (CSS selector + JSON + events)
 
