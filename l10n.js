@@ -31,6 +31,7 @@ document.webL10n = (function(window, document, undefined) {
   var gMacros = {};
   var gReadyState = 'loading';
 
+
   /**
    * Synchronously loading l10n resources significantly minimizes flickering
    * from displaying the app with non-localized strings and then updating the
@@ -807,7 +808,7 @@ document.webL10n = (function(window, document, undefined) {
   function getL10nData(key, args) {
     var data = gL10nData[key];
     if (!data) {
-      consoleWarn('#' + key + ' missing for [' + gLanguage + ']');
+      consoleWarn('#' + key + ' is undefined.');
     }
 
     /** This is where l10n expressions should be processed.
@@ -819,7 +820,7 @@ document.webL10n = (function(window, document, undefined) {
     for (var prop in data) {
       var str = data[prop];
       str = substIndexes(str, args, key, prop);
-      str = substArguments(str, args);
+      str = substArguments(str, args, key);
       rv[prop] = str;
     }
     return rv;
@@ -852,8 +853,8 @@ document.webL10n = (function(window, document, undefined) {
   }
 
   // replace {{arguments}} with their values
-  function substArguments(str, args) {
-    var reArgs = /\{\{\s*([a-zA-Z\.]+)\s*\}\}/;
+  function substArguments(str, args, key) {
+    var reArgs = /\{\{\s*(.+?)\s*\}\}/;
     var match = reArgs.exec(str);
     while (match) {
       if (!match || match.length < 2)
@@ -861,12 +862,12 @@ document.webL10n = (function(window, document, undefined) {
 
       var arg = match[1];
       var sub = '';
-      if (arg in args) {
+      if (args && arg in args) {
         sub = args[arg];
       } else if (arg in gL10nData) {
         sub = gL10nData[arg][gTextProp];
       } else {
-        consoleWarn('could not find argument {{' + arg + '}}');
+        consoleLog('argument {{' + arg + '}} for #' + key + ' is undefined.');
         return str;
       }
 
@@ -886,23 +887,21 @@ document.webL10n = (function(window, document, undefined) {
     // get the related l10n object
     var data = getL10nData(l10n.id, l10n.args);
     if (!data) {
-      consoleWarn('#' + l10n.id + ' missing for [' + gLanguage + ']');
+      consoleWarn('#' + l10n.id + ' is undefined.');
       return;
     }
 
     // translate element (TODO: security checks?)
-    // for the node content, replace the content of the first child textNode
-    // and clear other child textNodes
     if (data[gTextProp]) { // XXX
       if (getChildElementCount(element) === 0) {
         element[gTextProp] = data[gTextProp];
       } else {
-        var children = element.childNodes,
-            found = false;
+        // this element has element children: replace the content of the first
+        // (non-empty) child textNode and clear other child textNodes
+        var children = element.childNodes;
+        var found = false;
         for (var i = 0, l = children.length; i < l; i++) {
-          if (children[i].nodeType === 3 &&
-              /\S/.test(children[i].textContent)) { // XXX
-            // using nodeValue seems cross-browser
+          if (children[i].nodeType === 3 && /\S/.test(children[i].nodeValue)) {
             if (found) {
               children[i].nodeValue = '';
             } else {
@@ -911,8 +910,11 @@ document.webL10n = (function(window, document, undefined) {
             }
           }
         }
+        // if no (non-empty) textNode is found, insert a textNode before the
+        // first element child.
         if (!found) {
-          consoleWarn('unexpected error, could not translate element content');
+          var textNode = document.createTextNode(data[gTextProp]);
+          element.insertBefore(textNode, element.firstChild);
         }
       }
       delete data[gTextProp];
@@ -1135,7 +1137,7 @@ document.webL10n = (function(window, document, undefined) {
   };
 }) (window, document);
 
-// gettext-like shortcut for navigator.webL10n.get
+// gettext-like shortcut for document.webL10n.get
 if (window._ === undefined) {
   var _ = document.webL10n.get;
 }
