@@ -965,19 +965,33 @@ document.webL10n = (function(window, document, undefined) {
    * Unlike the rest of the lib, this section is not shared with FirefoxOS/Gaia.
    */
 
+  // load the default locale on startup
+  function l10nStartup() {
+    gReadyState = 'interactive';
+
+    // most browsers expose the UI language as `navigator.language'
+    // but IE uses `navigator.userLanguage' instead
+    var userLocale = navigator.language || navigator.userLanguage;
+    consoleLog('loading [' + userLocale + '] resources, ' +
+        (gAsyncResourceLoading ? 'asynchronously.' : 'synchronously.'));
+
+    // load the default locale and translate the document if required
+    if (document.documentElement.lang === userLocale) {
+      loadLocale(userLocale);
+    } else {
+      loadLocale(userLocale, translateFragment);
+    }
+  }
+
   // browser-specific startup
   if (document.addEventListener) { // modern browsers and IE9+
-    // If the document is not fully loaded yet, wait for DOMContentLoaded.
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() {
-        var lang = document.documentElement.lang || navigator.language;
-        loadLocale(lang, translateFragment);
-      }, false);
+      // the document is not fully loaded yet: wait for DOMContentLoaded.
+      document.addEventListener('DOMContentLoaded', l10nStartup);
     } else {
       // l10n.js is being loaded with <script defer> or <script async>,
       // the DOM is ready for parsing.
-      var lang = document.documentElement.lang || navigator.language;
-      loadLocale(lang, translateFragment);
+      window.setTimeout(l10nStartup);
     }
   } else if (window.attachEvent) { // IE8 and before (= oldIE)
     // TODO: check if jQuery is loaded (CSS selector + JSON + events)
@@ -1082,8 +1096,7 @@ document.webL10n = (function(window, document, undefined) {
     // startup for IE<9
     window.attachEvent('onload', function() {
       gTextProp = document.body.textContent ? 'textContent' : 'innerText';
-      var lang = document.documentElement.lang || window.navigator.userLanguage;
-      loadLocale(lang, translateFragment);
+      l10nStartup();
     });
   }
 
