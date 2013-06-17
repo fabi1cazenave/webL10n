@@ -968,15 +968,18 @@ document.webL10n = (function(window, document, undefined) {
   // load the default locale on startup
   function l10nStartup() {
     gReadyState = 'interactive';
-    consoleLog('loading [' + navigator.language + '] resources, ' +
+
+    // most browsers expose the UI language as `navigator.language'
+    // but IE uses `navigator.userLanguage' instead
+    var userLocale = navigator.language || navigator.userLanguage;
+    consoleLog('loading [' + userLocale + '] resources, ' +
         (gAsyncResourceLoading ? 'asynchronously.' : 'synchronously.'));
 
     // load the default locale and translate the document if required
-    if ((document.documentElement.lang === navigator.language) ||
-        (document.documentElement.lang === navigator.userLanguage) { // oldIE
-      loadLocale(navigator.language);
+    if (document.documentElement.lang === userLocale) {
+      loadLocale(userLocale);
     } else {
-      loadLocale(navigator.language, translateFragment);
+      loadLocale(userLocale, translateFragment);
     }
   }
 
