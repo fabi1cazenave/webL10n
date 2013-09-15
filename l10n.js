@@ -1110,9 +1110,12 @@ document.webL10n = (function(window, document, undefined) {
         prop = key.substr(index + 1);
         key = key.substring(0, index);
       }
-      var data = getL10nData(key, args) || fallback;
-      if (data) { // XXX double-check this
-        return prop in data ? data[prop] : '';
+      var data = getL10nData(key, args);
+      if (data && prop in data) { // XXX double-check this
+        return data[prop];
+      }
+      if (typeof fallback === 'string') {
+        return fallback;
       }
       return '{{' + key + '}}';
     },
