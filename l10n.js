@@ -1104,9 +1104,15 @@ document.webL10n = (function(window, document, undefined) {
   return {
     // get a localized string
     get: function(key, args, fallback) {
+      var index = key.lastIndexOf('.');
+      var prop = gTextProp;
+      if (index > 0) { // An attribute has been specified
+        prop = key.substr(index + 1);
+        key = key.substring(0, index);
+      }
       var data = getL10nData(key, args) || fallback;
       if (data) { // XXX double-check this
-        return gTextProp in data ? data[gTextProp] : '';
+        return prop in data ? data[prop] : '';
       }
       return '{{' + key + '}}';
     },
