@@ -805,10 +805,14 @@ document.webL10n = (function(window, document, undefined) {
    */
 
   // fetch an l10n object, warn if not found, apply `args' if possible
-  function getL10nData(key, args) {
+  function getL10nData(key, args, fallback) {
     var data = gL10nData[key];
     if (!data) {
       consoleWarn('#' + key + ' is undefined.');
+      if (!fallback) {
+        return null;
+      }
+      data = fallback;
     }
 
     /** This is where l10n expressions should be processed.
@@ -1103,19 +1107,21 @@ document.webL10n = (function(window, document, undefined) {
   // cross-browser API (sorry, oldIE doesn't support getters & setters)
   return {
     // get a localized string
-    get: function(key, args, fallback) {
+    get: function(key, args, fallbackString) {
       var index = key.lastIndexOf('.');
       var prop = gTextProp;
       if (index > 0) { // An attribute has been specified
         prop = key.substr(index + 1);
         key = key.substring(0, index);
       }
-      var data = getL10nData(key, args);
-      if (data && prop in data) { // XXX double-check this
-        return data[prop];
+      var fallback;
+      if (fallbackString) {
+        fallback = {};
+        fallback[prop] = fallbackString;
       }
-      if (typeof fallback === 'string') {
-        return fallback;
+      var data = getL10nData(key, args, fallback);
+      if (data && prop in data) {
+        return data[prop];
       }
       return '{{' + key + '}}';
     },
