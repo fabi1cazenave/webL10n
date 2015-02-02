@@ -205,7 +205,7 @@ document.webL10n = (function(window, document, undefined) {
       function parseRawLines(rawText, extendedSyntax) {
         var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
         var currentLang = '*';
-        var genericLang = lang.replace(/-[a-z]+$/i, '');
+        var genericLang = lang.split('-', 1)[0];
         var skipLang = false;
         var match = '';
 
