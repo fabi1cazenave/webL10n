@@ -115,14 +115,14 @@ document.webL10n = (function(window, document, undefined) {
     document.dispatchEvent(evtObject);
   }
 
-  function xhrLoadText(url, onSuccess, onFailure, asynchronous) {
+  function xhrLoadText(url, onSuccess, onFailure) {
     onSuccess = onSuccess || function _onSuccess(data) {};
     onFailure = onFailure || function _onFailure() {
       consoleWarn(url + ' not found.');
     };
 
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, asynchronous);
+    xhr.open('GET', url, gAsyncResourceLoading);
     if (xhr.overrideMimeType) {
       xhr.overrideMimeType('text/plain; charset=utf-8');
     }
@@ -191,7 +191,9 @@ document.webL10n = (function(window, document, undefined) {
     }
 
     // parse *.properties text data into an l10n dictionary
-    function parseProperties(text) {
+    // If gAsyncResourceLoading is false, then the callback will be called
+    // synchronously. Otherwise it is called asynchronously.
+    function parseProperties(text, parsedPropertiesCallback) {
       var dictionary = [];
 
       // token expressions
@@ -202,58 +204,69 @@ document.webL10n = (function(window, document, undefined) {
       var reSplit = /^([^=\s]*)\s*=\s*(.+)$/; // TODO: escape EOLs with '\'
 
       // parse the *.properties file into an associative array
-      function parseRawLines(rawText, extendedSyntax) {
+      function parseRawLines(rawText, extendedSyntax, parsedRawLinesCallback) {
         var entries = rawText.replace(reBlank, '').split(/[\r\n]+/);
         var currentLang = '*';
         var genericLang = lang.split('-', 1)[0];
         var skipLang = false;
         var match = '';
 
-        for (var i = 0; i < entries.length; i++) {
-          var line = entries[i];
-
-          // comment or blank line?
-          if (reComment.test(line))
-            continue;
-
-          // the extended syntax supports [lang] sections and @import rules
-          if (extendedSyntax) {
-            if (reSection.test(line)) { // section start?
-              match = reSection.exec(line);
-              // RFC 4646, section 4.4, "All comparisons MUST be performed
-              // in a case-insensitive manner."
-
-              currentLang = match[1].toLowerCase();
-              skipLang = (currentLang !== '*') &&
-                  (currentLang !== lang) && (currentLang !== genericLang);
-              continue;
-            } else if (skipLang) {
-              continue;
+        function nextEntry() {
+          // Use infinite loop instead of recursion to avoid reaching the
+          // maximum recursion limit for content with many lines.
+          while (true) {
+            if (!entries.length) {
+              parsedRawLinesCallback();
+              return;
             }
-            if (reImport.test(line)) { // @import rule?
-              match = reImport.exec(line);
-              loadImport(baseURL + match[1]); // load the resource synchronously
-            }
-          }
+            var line = entries.shift();
 
-          // key-value pair
-          var tmp = line.match(reSplit);
-          if (tmp && tmp.length == 3) {
-            dictionary[tmp[1]] = evalString(tmp[2]);
+            // comment or blank line?
+            if (reComment.test(line))
+              continue;
+
+            // the extended syntax supports [lang] sections and @import rules
+            if (extendedSyntax) {
+              if (reSection.test(line)) { // section start?
+                match = reSection.exec(line);
+                // RFC 4646, section 4.4, "All comparisons MUST be performed
+                // in a case-insensitive manner."
+
+                currentLang = match[1].toLowerCase();
+                skipLang = (currentLang !== '*') &&
+                    (currentLang !== lang) && (currentLang !== genericLang);
+                continue;
+              } else if (skipLang) {
+                continue;
+              }
+              if (reImport.test(line)) { // @import rule?
+                match = reImport.exec(line);
+                loadImport(baseURL + match[1], nextEntry);
+                return;
+              }
+            }
+
+            // key-value pair
+            var tmp = line.match(reSplit);
+            if (tmp && tmp.length == 3) {
+              dictionary[tmp[1]] = evalString(tmp[2]);
+            }
           }
         }
+        nextEntry();
       }
 
       // import another *.properties file
-      function loadImport(url) {
+      function loadImport(url, callback) {
         xhrLoadText(url, function(content) {
-          parseRawLines(content, false); // don't allow recursive imports
-        }, null, false); // load synchronously
+          parseRawLines(content, false, callback); // don't allow recursive imports
+        }, null);
       }
 
       // fill the dictionary
-      parseRawLines(text, true);
-      return dictionary;
+      parseRawLines(text, true, function() {
+        parsedPropertiesCallback(dictionary);
+      });
     }
 
     // load and parse l10n data (warning: global variables are used here)
@@ -261,29 +274,30 @@ document.webL10n = (function(window, document, undefined) {
       gTextData += response; // mostly for debug
 
       // parse *.properties text data into an l10n dictionary
-      var data = parseProperties(response);
+      parseProperties(response, function(data) {
 
-      // find attribute descriptions, if any
-      for (var key in data) {
-        var id, prop, index = key.lastIndexOf('.');
-        if (index > 0) { // an attribute has been specified
-          id = key.substring(0, index);
-          prop = key.substr(index + 1);
-        } else { // no attribute: assuming text content by default
-          id = key;
-          prop = gTextProp;
+        // find attribute descriptions, if any
+        for (var key in data) {
+          var id, prop, index = key.lastIndexOf('.');
+          if (index > 0) { // an attribute has been specified
+            id = key.substring(0, index);
+            prop = key.substr(index + 1);
+          } else { // no attribute: assuming text content by default
+            id = key;
+            prop = gTextProp;
+          }
+          if (!gL10nData[id]) {
+            gL10nData[id] = {};
+          }
+          gL10nData[id][prop] = data[key];
         }
-        if (!gL10nData[id]) {
-          gL10nData[id] = {};
-        }
-        gL10nData[id][prop] = data[key];
-      }
 
-      // trigger callback
-      if (successCallback) {
-        successCallback();
-      }
-    }, failureCallback, gAsyncResourceLoading);
+        // trigger callback
+        if (successCallback) {
+          successCallback();
+        }
+      });
+    }, failureCallback);
   }
 
   // load and parse all resources for the specified locale
@@ -1033,13 +1047,13 @@ document.webL10n = (function(window, document, undefined) {
 
     // XMLHttpRequest for IE6
     if (!window.XMLHttpRequest) {
-      xhrLoadText = function(url, onSuccess, onFailure, asynchronous) {
+      xhrLoadText = function(url, onSuccess, onFailure) {
         onSuccess = onSuccess || function _onSuccess(data) {};
         onFailure = onFailure || function _onFailure() {
           consoleWarn(url + ' not found.');
         };
         var xhr = new ActiveXObject('Microsoft.XMLHTTP');
-        xhr.open('GET', url, asynchronous);
+        xhr.open('GET', url, gAsyncResourceLoading);
         xhr.onreadystatechange = function() {
           if (xhr.readyState == 4) {
             if (xhr.status == 200) {
