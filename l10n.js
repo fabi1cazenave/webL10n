@@ -61,13 +61,13 @@ document.webL10n = (function(window, document, undefined) {
     if (gDEBUG >= 2) {
       console.log('[l10n] ' + message);
     }
-  };
+  }
 
   function consoleWarn(message) {
     if (gDEBUG) {
       console.warn('[l10n] ' + message);
     }
-  };
+  }
 
 
   /**
@@ -281,7 +281,7 @@ document.webL10n = (function(window, document, undefined) {
         successCallback();
       }
     }, failureCallback, gAsyncResourceLoading);
-  };
+  }
 
   // load and parse all resources for the specified locale
   function loadLocale(lang, callback) {
@@ -294,7 +294,7 @@ document.webL10n = (function(window, document, undefined) {
     // and load the resource files
     var langLinks = getL10nResourceLinks();
     var langCount = langLinks.length;
-    if (langCount == 0) {
+    if (langCount === 0) {
       // we might have a pre-compiled dictionary instead
       var dict = getL10nDictionary();
       if (dict && dict.locales && dict.default_locale) {
@@ -323,7 +323,7 @@ document.webL10n = (function(window, document, undefined) {
     };
 
     // load all resource files
-    function l10nResourceLink(link) {
+    function L10nResourceLink(link) {
       var href = link.href;
       var type = link.type;
       this.load = function(lang, callback) {
@@ -337,7 +337,7 @@ document.webL10n = (function(window, document, undefined) {
     }
 
     for (var i = 0; i < langCount; i++) {
-      var resource = new l10nResourceLink(langLinks[i]);
+      var resource = new L10nResourceLink(langLinks[i]);
       var rv = resource.load(lang, onResourceLoaded);
       if (rv != lang) { // lang not found, used default resource instead
         consoleWarn('"' + lang + '" resource not found');
@@ -805,10 +805,14 @@ document.webL10n = (function(window, document, undefined) {
    */
 
   // fetch an l10n object, warn if not found, apply `args' if possible
-  function getL10nData(key, args) {
+  function getL10nData(key, args, fallback) {
     var data = gL10nData[key];
     if (!data) {
       consoleWarn('#' + key + ' is undefined.');
+      if (!fallback) {
+        return null;
+      }
+      data = fallback;
     }
 
     /** This is where l10n expressions should be processed.
@@ -1025,7 +1029,7 @@ document.webL10n = (function(window, document, undefined) {
           }
         };
         xhr.send(null);
-      }
+      };
     }
 
     // worst hack ever for IE6 and IE7
@@ -1103,10 +1107,21 @@ document.webL10n = (function(window, document, undefined) {
   // cross-browser API (sorry, oldIE doesn't support getters & setters)
   return {
     // get a localized string
-    get: function(key, args, fallback) {
-      var data = getL10nData(key, args) || fallback;
-      if (data) { // XXX double-check this
-        return gTextProp in data ? data[gTextProp] : '';
+    get: function(key, args, fallbackString) {
+      var index = key.lastIndexOf('.');
+      var prop = gTextProp;
+      if (index > 0) { // An attribute has been specified
+        prop = key.substr(index + 1);
+        key = key.substring(0, index);
+      }
+      var fallback;
+      if (fallbackString) {
+        fallback = {};
+        fallback[prop] = fallbackString;
+      }
+      var data = getL10nData(key, args, fallback);
+      if (data && prop in data) {
+        return data[prop];
       }
       return '{{' + key + '}}';
     },
