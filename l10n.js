@@ -1123,7 +1123,7 @@ document.webL10n = (function(window, document, undefined) {
 
     // startup for IE<9
     window.attachEvent('onload', function() {
-      gTextProp = document.body.textContent ? 'textContent' : 'innerText';
+      gTextProp = document.textContent === null ? 'textContent' : 'innerText';
       l10nStartup();
     });
   }
