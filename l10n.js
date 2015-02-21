@@ -194,7 +194,7 @@ document.webL10n = (function(window, document, undefined) {
     // If gAsyncResourceLoading is false, then the callback will be called
     // synchronously. Otherwise it is called asynchronously.
     function parseProperties(text, parsedPropertiesCallback) {
-      var dictionary = [];
+      var dictionary = {};
 
       // token expressions
       var reBlank = /^\s*|\s*$/;
