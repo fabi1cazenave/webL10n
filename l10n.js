@@ -227,8 +227,8 @@ document.webL10n = (function(window, document, undefined) {
 
             // the extended syntax supports [lang] sections and @import rules
             if (extendedSyntax) {
-              if (reSection.test(line)) { // section start?
-                match = reSection.exec(line);
+              match = reSection.exec(line);
+              if (match) { // section start?
                 // RFC 4646, section 4.4, "All comparisons MUST be performed
                 // in a case-insensitive manner."
 
@@ -239,8 +239,8 @@ document.webL10n = (function(window, document, undefined) {
               } else if (skipLang) {
                 continue;
               }
-              if (reImport.test(line)) { // @import rule?
-                match = reImport.exec(line);
+              match = reImport.exec(line);
+              if (match) { // @import rule?
                 loadImport(baseURL + match[1], nextEntry);
                 return;
               }
@@ -893,28 +893,17 @@ document.webL10n = (function(window, document, undefined) {
 
   // replace {{arguments}} with their values
   function substArguments(str, args, key) {
-    var reArgs = /\{\{\s*(.+?)\s*\}\}/;
-    var match = reArgs.exec(str);
-    while (match) {
-      if (!match || match.length < 2)
-        return str; // argument key not found
-
-      var arg = match[1];
-      var sub = '';
+    var reArgs = /\{\{\s*(.+?)\s*\}\}/g;
+    return str.replace(reArgs, function(matched_text, arg) {
       if (args && arg in args) {
-        sub = args[arg];
-      } else if (arg in gL10nData) {
-        sub = gL10nData[arg][gTextProp];
-      } else {
-        consoleLog('argument {{' + arg + '}} for #' + key + ' is undefined.');
-        return str;
+        return args[arg];
       }
-
-      str = str.substring(0, match.index) + sub +
-            str.substr(match.index + match[0].length);
-      match = reArgs.exec(str);
-    }
-    return str;
+      if (arg in gL10nData) {
+        return gL10nData[arg];
+      }
+      consoleLog('argument {{' + arg + '}} for #' + key + ' is undefined.');
+      return matched_text;
+    });
   }
 
   // translate an HTML element
@@ -1134,7 +1123,7 @@ document.webL10n = (function(window, document, undefined) {
 
     // startup for IE<9
     window.attachEvent('onload', function() {
-      gTextProp = document.body.textContent ? 'textContent' : 'innerText';
+      gTextProp = document.textContent === null ? 'textContent' : 'innerText';
       l10nStartup();
     });
   }
