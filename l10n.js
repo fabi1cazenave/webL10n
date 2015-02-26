@@ -1155,7 +1155,13 @@ document.webL10n = (function(window, document, undefined) {
 
     // get|set the document language
     getLanguage: function() { return gLanguage; },
-    setLanguage: function(lang) { loadLocale(lang, translateFragment); },
+    setLanguage: function(lang, callback) {
+      loadLocale(lang, function() {
+        if (callback)
+          callback();
+        translateFragment();
+      });
+    },
 
     // get the direction (ltr|rtl) of the current language
     getDirection: function() {
