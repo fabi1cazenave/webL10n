@@ -360,24 +360,23 @@ document.webL10n = (function(window, document, undefined) {
     // load all resource files
     function L10nResourceLink(link) {
       var href = link.href;
-      var type = link.type;
+      // Note: If |gAsyncResourceLoading| is false, then the following callbacks
+      // are synchronously called.
       this.load = function(lang, callback) {
-        var applied = lang;
         parseResource(href, lang, callback, function() {
           consoleWarn(href + ' not found.');
-          applied = '';
+          // lang not found, used default resource instead
+          consoleWarn('"' + lang + '" resource not found');
+          gLanguage = '';
+          // Resource not loaded, but we still need to call the callback.
+          callback();
         });
-        return applied; // return lang if found, an empty string if not found
       };
     }
 
     for (var i = 0; i < langCount; i++) {
       var resource = new L10nResourceLink(langLinks[i]);
-      var rv = resource.load(lang, onResourceLoaded);
-      if (rv != lang) { // lang not found, used default resource instead
-        consoleWarn('"' + lang + '" resource not found');
-        gLanguage = '';
-      }
+      resource.load(lang, onResourceLoaded);
     }
   }
 
@@ -1156,7 +1155,13 @@ document.webL10n = (function(window, document, undefined) {
 
     // get|set the document language
     getLanguage: function() { return gLanguage; },
-    setLanguage: function(lang) { loadLocale(lang, translateFragment); },
+    setLanguage: function(lang, callback) {
+      loadLocale(lang, function() {
+        if (callback)
+          callback();
+        translateFragment();
+      });
+    },
 
     // get the direction (ltr|rtl) of the current language
     getDirection: function() {
