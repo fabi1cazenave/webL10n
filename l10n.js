@@ -1180,12 +1180,18 @@ document.webL10n = (function(window, document, undefined) {
       if (!callback) {
         return;
       } else if (gReadyState == 'complete' || gReadyState == 'interactive') {
-        window.setTimeout(callback);
+        window.setTimeout(function() {
+          callback();
+        });
       } else if (document.addEventListener) {
-        document.addEventListener('localized', callback);
+        document.addEventListener('localized', function once() {
+          document.removeEventListener('localized', once);
+          callback();
+        });
       } else if (document.attachEvent) {
-        document.documentElement.attachEvent('onpropertychange', function(e) {
+        document.documentElement.attachEvent('onpropertychange', function once(e) {
           if (e.propertyName === 'localized') {
+            document.documentElement.detachEvent('onpropertychange', once);
             callback();
           }
         });
