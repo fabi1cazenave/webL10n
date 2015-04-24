@@ -1,0 +1,21 @@
+{
+  "name": "webl10n",
+  "version": "1.0.0",
+  "description": "internationalization and localization library",
+  "main": "l10n.js",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fabi1cazenave/webL10n.git"
+  },
+  "keywords": [
+    "l10n",
+    "i18n"
+  ],
+  "author": "Fabien Cazenave",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/fabi1cazenave/webL10n/issues"
+  },
+  "homepage": "https://github.com/fabi1cazenave/webL10n"
+}
